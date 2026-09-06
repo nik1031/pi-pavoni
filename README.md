@@ -46,7 +46,7 @@ Bill of materials, links, and open questions (thread sizes, adapters, etc.) are 
 
 Following along phase by phase — each one gets its own writeup under `docs/` once it's done.
 
-- [ ] **Phase 0** — Toolchain: flash MicroPython, REPL, blink the onboard LED
+- [x] **Phase 0** — Toolchain: flash MicroPython, REPL, blink the onboard LED ([writeup](docs/00-toolchain.md))
 - [ ] **Phase 1** — Bench ADC: read the transducer's voltage on the bench, unplugged from the machine
 - [ ] **Phase 2** — Calibration & sampling loop: voltage → bar, polling vs. timer-driven sampling
 - [ ] **Phase 3** — BLE peripheral: advertise a GATT service, stream bench data
