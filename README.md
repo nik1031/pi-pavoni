@@ -2,7 +2,7 @@
 
 Instrumenting a fully manual La Pavoni lever espresso machine with a Raspberry Pi Pico 2 W to capture and analyze its extraction pressure curve — and learning MicroPython along the way.
 
-🚧 **Work in progress.** Currently on Phase 0 (toolchain) of the build. See [Build log](#build-log) below.
+🚧 **Work in progress.** Phase 1 done, including a first real (and revealingly failed) captured shot β€” see [First results](#first-results) and [Build log](#build-log) below.
 
 ## TL;DR
 
@@ -38,6 +38,10 @@ At a high level:
 
 The Pico samples the transducer during a shot and streams readings over Bluetooth Low Energy; a Python script on the laptop (using `bleak`) receives and records them for analysis. More detail on each piece lives in the build log below as it gets built.
 
+## First results
+
+The first real captured pull (Phase 1) told a good story: pressure peaked at only **~7.4 bar** (short of the ~9 bar target) and stayed above a "meaningfully extracting" 6 bar threshold for just **~2.7 seconds** before decaying away. The shot tasted sour β€” underextracted β€” which now has a measured, specific cause instead of a guess. Getting to that clean result took a real debugging detour first: a leak at the mounting joint, and a separately-discovered floating/disconnected sensor pin that had been quietly producing plausible-but-meaningless readings. Full writeup in [docs/01-bench-adc-and-first-pull.md](docs/01-bench-adc-and-first-pull.md), analysis notebook (with the annotated pressure curve) in [analysis/first_shot.ipynb](analysis/first_shot.ipynb).
+
 ## Hardware
 
 Bill of materials, datasheets, docs, and other reference links are all tracked in [RESOURCES.md](RESOURCES.md).
@@ -47,12 +51,12 @@ Bill of materials, datasheets, docs, and other reference links are all tracked i
 Following along phase by phase — each one gets its own writeup under `docs/` once it's done.
 
 - [x] **Phase 0** — Toolchain: flash MicroPython, REPL, blink the onboard LED ([writeup](docs/00-toolchain.md))
-- [ ] **Phase 1** — Bench ADC: read the transducer's voltage on the bench, unplugged from the machine
-- [ ] **Phase 2** — Calibration & sampling loop: voltage → bar, polling vs. timer-driven sampling
+- [x] **Phase 1** — Bench ADC: read the transducer's voltage, diagnose a floating-pin saga and a mounting leak, capture a first real (failed) shot ([writeup](docs/01-bench-adc-and-first-pull.md), [analysis](analysis/first_shot.ipynb))
+- [ ] **Phase 2** — Calibration & sampling loop: proper two-point voltage → bar calibration against a reference gauge (currently a rough single-assumption line), polling vs. timer-driven sampling
 - [ ] **Phase 3** — BLE peripheral: advertise a GATT service, stream bench data
 - [ ] **Phase 4** — Laptop client: `bleak`, buffering, live plotting
-- [ ] **Phase 5** — Physical install: sensor into the machine for real
-- [ ] **Phase 6** — Real shots + analysis: actual pressure curves, comparing pulls
+- [ ] **Phase 5** — Physical install: seal the mounting joint properly (currently leaking, no PTFE tape used yet)
+- [ ] **Phase 6** — Real shots + analysis: comparing pulls, finding what a good profile looks like
 
 ## Getting started
 

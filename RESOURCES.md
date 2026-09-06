@@ -39,6 +39,12 @@ This list will grow as we hit each phase — add items as they come up rather th
 - [Home-Barista: La Pavoni Pro gauge thread size discussion](https://www.home-barista.com/levers/help-what-is-thread-size-la-pavoni-pro-pressure-gauge-t6171.html)
 - [Coffee Sensor — La Pavoni parts](https://coffee-sensor.com/)
 
+## Coffee & pressure profiling theory
+
+- [Sprudge: La Marzocco pressure profiling chart, with Jimseven](https://sprudge.com/la-marzocco-pressure-profiling-chart-with-jimseven-goodness-6185.html) — real-world example of reading and shaping a pressure profile on a high-end machine
+- [Daily Drink Mag: Espresso under 6 bar (Monday Espresso)](https://dailydrinkmag.com/espresso-under-6-bar-monday-espresso/) — what under-pressure/underextracted espresso looks and tastes like, directly relevant to the first captured shot's sour result
+- [Prestige Coffee: Master the art of espresso with pressure profiling](https://prestige-coffee.com.au/blogs/coffee-guides-prestige-coffee/master-the-art-of-espresso-with-pressure-profiling?srsltid=AfmBOooQ6CflYXAcrq-dRP4IdDggMMwauM4thpBjAdqB6SBtbBr1ubq3) — general primer on what pressure profiling is and why it matters for extraction
+
 ## Software
 
 ### Tooling
