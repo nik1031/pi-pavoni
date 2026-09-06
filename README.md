@@ -6,7 +6,7 @@ Instrumenting a fully manual La Pavoni lever espresso machine with a Raspberry P
 
 ## TL;DR
 
-A fully manual La Pavoni lever espresso machine has no electronics — you generate brew pressure by hand, and the only feedback is an analog gauge you can't record or replay. This project screws a pressure transducer into the group head, reads it with a Raspberry Pi Pico 2 W, and streams the pressure curve over Bluetooth to a laptop so shots can actually be logged, compared, and (eventually) used to figure out what a great pull looks like versus a bad one. Also doubling as a from-scratch MicroPython learning project — see [Why](#why) and [The idea](#the-idea) for the full story, [SHOPPING_LIST.md](SHOPPING_LIST.md) for hardware, and [Build log](#build-log) for current progress.
+A fully manual La Pavoni lever espresso machine has no electronics — you generate brew pressure by hand, and the only feedback is an analog gauge you can't record or replay. This project screws a pressure transducer into the group head, reads it with a Raspberry Pi Pico 2 W, and streams the pressure curve over Bluetooth to a laptop so shots can actually be logged, compared, and (eventually) used to figure out what a great pull looks like versus a bad one. Also doubling as a from-scratch MicroPython learning project — see [Why](#why) and [The idea](#the-idea) for the full story, [RESOURCES.md](RESOURCES.md) for hardware, and [Build log](#build-log) for current progress.
 
 ## Why
 
@@ -40,7 +40,7 @@ The Pico samples the transducer during a shot and streams readings over Bluetoot
 
 ## Hardware
 
-Bill of materials, links, and open questions (thread sizes, adapters, etc.) are tracked in [SHOPPING_LIST.md](SHOPPING_LIST.md).
+Bill of materials, datasheets, docs, and other reference links are all tracked in [RESOURCES.md](RESOURCES.md).
 
 ## Build log
 
