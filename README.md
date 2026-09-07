@@ -1,12 +1,12 @@
 # Pi Pavoni
 
-Instrumenting a fully manual La Pavoni lever espresso machine with a Raspberry Pi Pico 2 W to capture and analyze its extraction pressure curve — and learning MicroPython along the way.
+Instrumenting a fully manual La Pavoni lever espresso machine with a Raspberry Pi Pico 2 W to capture and analyze its extraction pressure curve — and learning microelectronics along the way.
 
 🚧 **Work in progress.** Phase 1 done, including a first real (and revealingly failed) captured shot β€” see [First results](#first-results) and [Build log](#build-log) below.
 
 ## TL;DR
 
-A fully manual La Pavoni lever espresso machine has no electronics — you generate brew pressure by hand, and the only feedback is an analog gauge you can't record or replay. This project screws a pressure transducer into the group head, reads it with a Raspberry Pi Pico 2 W, and streams the pressure curve over Bluetooth to a laptop so shots can actually be logged, compared, and (eventually) used to figure out what a great pull looks like versus a bad one. Also doubling as a from-scratch MicroPython learning project — see [Why](#why) and [The idea](#the-idea) for the full story, [RESOURCES.md](RESOURCES.md) for hardware, and [Build log](#build-log) for current progress.
+A fully manual La Pavoni lever espresso machine has no electronics — you generate brew pressure by hand, and the only feedback is an analog gauge you can't record or replay. This project screws a pressure transducer into the group head, reads it with a Raspberry Pi Pico 2 W, and streams the pressure curve over Bluetooth to a laptop so shots can actually be logged, compared, and (eventually) used to figure out what a great pull looks like versus a bad one. Also doubling as a from-scratch microelectronics learning project — see [Why](#why) and [The idea](#the-idea) for the full story, [RESOURCES.md](RESOURCES.md) for hardware, and [Build log](#build-log) for current progress.
 
 ## Why
 
@@ -16,11 +16,11 @@ Learning to pull a decent shot on a La Pavoni took a long time. And here's the t
 
 The gauges tell you *a* number, but not the shape of what happened during the shot — how pressure built, held, or spiked as you pulled the lever. That curve is where the actual story of a good or bad shot lives, and no analog gauge shows it to you in a way you can review, compare, or learn from.
 
-So: this project is an attempt to actually capture that curve — wire a pressure transducer into the group head, read it with a Raspberry Pi Pico 2 W, stream it out, and start building a real picture of what a good pull looks like versus a bad one. It's also my excuse to actually learn MicroPython properly instead of just reading about it.
+So: this project is an attempt to actually capture that curve — wire a pressure transducer into the group head, read it with a Raspberry Pi Pico 2 W, stream it out, and start building a real picture of what a good pull looks like versus a bad one. It's also my excuse to actually learn microelectronics properly instead of just reading about it.
 
 ## The idea
 
-I work in data engineering, and I'm using this project to properly learn software engineering. Somewhere along the way I decided I wanted to make a fully manual, fully analog lever machine into the most precise espresso machine I possibly could — which is a bit of a contradiction, since manual lever machines exist specifically *because* there's no electronics in the loop. Part of the fun is embracing that contradiction anyway.
+I work in data engineering, and I'm using this project to properly learn microelectronics. Somewhere along the way I decided I wanted to make a fully manual, fully analog lever machine into the most precise espresso machine I possibly could — which is a bit of a contradiction, since manual lever machines exist specifically *because* there's no electronics in the loop. Part of the fun is embracing that contradiction anyway.
 
 There are machines out there — like the Decent Espresso DE1 — that ship with their own touchscreen specifically to shape and review extraction profiles in real time, at a price that puts them well out of reach for most people learning espresso. The goal of Pi Pavoni is to bring a version of that same idea to a much cheaper, much more manual machine: instrument it, capture what's actually happening during a shot, and use the data to build a real understanding of what "good" looks like — instead of guessing based on feel.
 

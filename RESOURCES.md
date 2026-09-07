@@ -18,8 +18,9 @@ Bill of materials, datasheets, docs, and prior art for this project — collecte
 - [ ] **PTFE (Teflon) thread seal tape** — for sealing the transducer into the group head port. Standard for espresso machine fittings.
 - [x] **La Pavoni Esperto Piston Shaft Pressure Gauge Adapter** (OEM part 2124013451, confirmed for Esperto Abile/Competente/Edotto) — [The Espresso Shop](https://theespressoshop.com/products/esperto-piston-shaft-pressure-gauge-adapter-2124013451?variant=48557254017356)
   - Mounts to the piston shaft, not a simple group-head port — different mechanism than assumed, still brew-side pressure.
-  - **Open question:** the gauge-facing thread size wasn't listed on the product page, so it's not yet confirmed whether it lands on G1/8 (matching the transducer) or something else. Check by measuring once it arrives, or ask the seller, before assuming no further adapter is needed.
+  - Resolved: the transducer does thread in directly. Currently unsealed (no PTFE tape used yet) and leaks slightly during a pull — needs the PTFE tape above before more testing.
 - [ ] Small adjustable spanner/wrench sized for the fitting, to remove the old gauge and thread in the transducer.
+- [ ] **Food-safe T-splitter/adapter**, sized to fit between the piston-shaft adapter and both the transducer and the machine's original analog gauge simultaneously — needed for Phase 2's real calibration (read both gauges on the same pressure at the same time during a pull, derive a linear correction from the difference). Not needed for now; current calibration is a rough datasheet-based assumption until this arrives.
 - [ ] Soldering iron + solder — if you solder header pins to the Pico or make permanent wire connections.
 - [ ] Wire strippers/small side cutters.
 - [ ] Small heat-shrink tubing or electrical tape — for insulating/protecting solder joints near the machine.
