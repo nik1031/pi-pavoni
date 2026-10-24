@@ -5,7 +5,8 @@
         "reportMissingModuleSource": "none"
     },
     "python.terminal.activateEnvironment": false,
-    "micropico.openOnStart": true,
+    "micropico.openOnStart": false,
+    "micropico.autoConnect": false,
     "micropico.syncFolder": "pico",
     "python.analysis.typeshedPaths": [
         "~/.micropico-stubs/included"

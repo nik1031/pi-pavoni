@@ -11,6 +11,7 @@ opening), and shading the body left-to-right to fake curvature.
 
 from PIL import Image, ImageDraw
 import math
+import sys
 
 GRID = 40            # logical pixel grid (40x40)
 SCALE = 6             # 40 * 6 = 240, matches the display exactly
@@ -71,7 +72,7 @@ def liquid_level_row(frame):
     return round(interior_bottom - progress * (interior_bottom - interior_top))
 
 
-def draw_frame(frame):
+def draw_frame(frame, scale=SCALE):
     img = Image.new("RGB", (GRID, GRID), BG)
     d = ImageDraw.Draw(img)
 
@@ -107,12 +108,14 @@ def draw_frame(frame):
                 if fade < 10:
                     d.point((col, row), fill=STEAM)
 
-    return img.resize((SIZE, SIZE), Image.NEAREST)
+    return img.resize((GRID * scale, GRID * scale), Image.NEAREST)
 
 
 def main():
-    frames = [draw_frame(f) for f in range(TOTAL_FRAMES)]
-    out_path = "coffee_pour.gif"
+    # optional args: scale and output name, e.g. `3 coffee_pour_small.gif` for 120x120
+    scale = int(sys.argv[1]) if len(sys.argv) > 1 else SCALE
+    out_path = sys.argv[2] if len(sys.argv) > 2 else "coffee_pour.gif"
+    frames = [draw_frame(f, scale) for f in range(TOTAL_FRAMES)]
     frames[0].save(
         out_path,
         save_all=True,
@@ -121,7 +124,7 @@ def main():
         loop=0,
         disposal=2,
     )
-    print(f"Wrote {out_path}: {len(frames)} frames at {SIZE}x{SIZE}")
+    print(f"Wrote {out_path}: {len(frames)} frames at {GRID * scale}x{GRID * scale}")
 
 
 if __name__ == "__main__":
