@@ -42,7 +42,7 @@ The Pico samples the transducer during a shot and streams readings over Bluetoot
 
 The first real captured pull (Phase 1) told a good story: pressure peaked at only **~7.4 bar** (short of the ~9 bar target) and stayed above a "meaningfully extracting" 6 bar threshold for just **~2.7 seconds** before decaying away. The shot tasted sour - underextracted - which now has a measured, specific cause instead of a guess. Getting to that clean result took a real debugging detour first: a leak at the mounting joint, and a separately-discovered floating/disconnected sensor pin that had been quietly producing plausible-but-meaningless readings.
 
-![Annotated pressure curve of the first captured pull, showing a peak of 7.41 bar against a 9 bar target line, and a ~2.7s window above a 6 bar "meaningful extraction" threshold](analysis/first_shot.png)
+![Annotated pressure curve of the first captured pull, showing a peak of 7.41 bar against a 9 bar target line, and a ~2.7s window above a 6 bar "meaningful extraction" threshold](analysis/figures/first_shot.png)
 
 **Verdict:** this shot was very sour, and it's now obvious why - meaningful extraction time (time spent above 6 bar) was only ~2.7 seconds, nowhere near enough. Not a mystery this time, a measurement.
 

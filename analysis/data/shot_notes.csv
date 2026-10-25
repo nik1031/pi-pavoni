@@ -1,3 +1,5 @@
-shot,date,beans,roast,freshness,grind_setting,dose_g,basket,taste,notes
-first_shot_2026-09-06,2026-09-06,,,,,,,sour (underextracted),first captured shot; transducer joint leaking slightly (no PTFE tape)
-shot_010,2026-10-24,Lidl (£3),very dark,fresh,3,9,small,"very nice: balanced, no sourness, no bitterness","flavour notes hard to pick out, put down to the beans rather than the extraction"
+shot,date,beans,roast,freshness,grind_setting,dose_g,yield_g,basket,comments
+first_shot_2026-09-06,2026-09-06,,,,,,,,sour (underextracted). first captured shot; transducer joint leaking slightly (no PTFE tape)
+shot_010,2026-10-24,Lidl (£3),very dark,fresh,3,9,,small,"very nice: balanced, no sourness, no bitterness. flavour notes hard to pick out, put down to the beans rather than the extraction"
+shot_011,2026-10-25,Lidl,very dark,fresh,2,9,35,small,Best shot so far. No taste notes identified
+shot_012,2026-10-25,Lidl,very dark,fresh,2,9,27,small,Bitter - slightly burnt. Grinder was stuck with static retention so slowly fed

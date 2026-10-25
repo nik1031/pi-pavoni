@@ -1,0 +1,921 @@
+<title>Pi Pavoni Shots</title>
+<meta charset="utf-8">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+/* Layout: one column of instrument readouts. Controls, then gauges (tiles), then the trace, then the shot's notes and the full logbook. */
+:root {
+  --bg: #f3f1ef;
+  --panel: #fbfaf9;
+  --fg: #1d1814;
+  --muted: #6c625a;
+  --line: #ddd5ce;
+  --trace: #5b3420;        /* espresso brown: the selected shot */
+  --ghost: #9a8f86;        /* comparison shot */
+  --zone: #d98a1f;         /* >= 6 bar, meaningful extraction */
+  --zone-fill: rgba(217, 138, 31, 0.28);
+  --rest-fill: rgba(108, 98, 90, 0.16);
+  --target: #2e8a58;       /* 9 bar */
+  --peak: #c0392b;
+  --ph-pre: #6f9ed8;       /* phases, same hues as the Pico's screen */
+  --ph-ext: #d98a1f;
+  --ph-ext-strong: #a35f0c; /* the >= 6 bar stretch inside extraction */
+  --ph-drip: #9a8f86;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif-condensed, system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14110f; --panel: #1c1815; --fg: #eee7e1; --muted: #a59a90; --line: #352e29;
+    --trace: #e0a878; --ghost: #7d736b; --zone: #e9a447; --zone-fill: rgba(233, 164, 71, 0.24);
+    --rest-fill: rgba(165, 154, 144, 0.14); --target: #57c08a; --peak: #f0705f;
+    --ph-pre: #82b2ee; --ph-ext: #e9a447; --ph-ext-strong: #b8741f; --ph-drip: #8a8078;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14110f; --panel: #1c1815; --fg: #eee7e1; --muted: #a59a90; --line: #352e29;
+  --trace: #e0a878; --ghost: #7d736b; --zone: #e9a447; --zone-fill: rgba(233, 164, 71, 0.24);
+  --rest-fill: rgba(165, 154, 144, 0.14); --target: #57c08a; --peak: #f0705f;
+  --ph-pre: #82b2ee; --ph-ext: #e9a447; --ph-ext-strong: #b8741f; --ph-drip: #8a8078;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); line-height: 1.45; }
+.wrap {
+  max-width: 1600px; margin: 0 auto;
+  padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 20px;
+}
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: 1.9rem; letter-spacing: 0.01em; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 2px 0 0; font-size: 0.95rem; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+select, button {
+  font: 500 0.95rem var(--font-data); color: var(--fg); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px;
+}
+button { cursor: pointer; }
+select:focus-visible, button:focus-visible { outline: 2px solid var(--trace); outline-offset: 2px; }
+.steps { display: flex; gap: 6px; }
+
+.gauges { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.gauge { background: var(--panel); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gauge .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.gauge .v { font-family: var(--font-display); font-weight: 600; font-size: 1.7rem; font-variant-numeric: tabular-nums; }
+.gauge .v small { font-family: var(--font-data); font-weight: 400; font-size: 0.8rem; color: var(--muted); margin-left: 3px; }
+.gauge .d { font-family: var(--font-data); font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; font: 500 0.72rem var(--font-data); padding: 1px 7px; border-radius: 99px; border: 1px solid currentColor; }
+.ok { color: var(--target); } .warn { color: var(--zone); } .bad { color: var(--peak); }
+
+.chart-box { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 14px 8px; position: relative; min-width: 0; }
+.chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; margin: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 0.78rem var(--font-data); color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font-family: var(--font-data); font-size: 11px; fill: var(--muted); }
+.readout { position: absolute; pointer-events: none; font: 0.8rem var(--font-data); background: var(--fg); color: var(--bg); padding: 4px 8px; border-radius: 5px; white-space: nowrap; }
+
+.side-by-side { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 2.4fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .side-by-side { grid-template-columns: minmax(0, 1fr); } .side-by-side .notes { order: 1; } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; min-width: 0; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin-top: 12px; }
+.fields .wide { grid-column: 1 / -1; }
+.fields label { text-transform: none; letter-spacing: 0; font-size: 0.78rem; }
+input, textarea {
+  font: 0.92rem var(--font-body); color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%; box-sizing: border-box; min-width: 0;
+}
+textarea { resize: vertical; min-height: 2.6em; }
+input:focus-visible, textarea:focus-visible { outline: 2px solid var(--trace); outline-offset: 1px; }
+input:disabled, textarea:disabled { opacity: 0.6; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.75; }
+.form-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.ratio { font: 500 0.95rem var(--font-data); }
+.ratio small { color: var(--muted); font-weight: 400; }
+button.primary { background: var(--trace); color: var(--bg); border-color: var(--trace); }
+button:disabled { opacity: 0.55; cursor: default; }
+.status { font: 0.8rem var(--font-data); color: var(--muted); }
+.status.saved { color: var(--target); } .status.err { color: var(--peak); } .status.dirty { color: var(--zone); }
+td.taste { max-width: 14em; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.upload-summary { margin: 8px 0 0; font-size: 0.92rem; }
+.upload-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-top: 10px; }
+.upload-row label { text-transform: none; letter-spacing: 0; font-size: 0.78rem; flex: 1 1 14em; }
+.tag { font: 500 0.68rem var(--font-data); color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 0 6px; margin-left: 6px; }
+button.link { background: none; border: none; padding: 0 2px; color: var(--muted); font: 0.75rem var(--font-data); text-decoration: underline; }
+button.link.armed { color: var(--peak); }
+.phase-rows { margin-top: 8px; border-top: 1px solid var(--line); }
+.phase-rows .foot { margin: 6px 0 0; }
+.phase-dot { display: inline-block; width: 8px; height: 8px; border-radius: 99px; margin-right: 7px; vertical-align: middle; }
+
+/* legend: one row per plotted shot, with that shot's comment beside it */
+.legend-shots { list-style: none; margin: 8px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.legend-shots li { display: grid; grid-template-columns: 22px auto minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: 0.9rem; }
+.legend-shots .swatch { height: 0; border-top: 3px solid var(--trace); align-self: center; }
+.legend-shots .swatch.ghost { border-top: 2px dashed var(--ghost); }
+.legend-shots .name { font: 500 0.85rem var(--font-data); white-space: nowrap; }
+.legend-shots .comment { color: var(--muted); overflow-wrap: anywhere; }
+.legend-shots .comment.none { font-style: italic; opacity: 0.8; }
+.table-scroll { overflow-x: auto; margin-top: 10px; }
+table { border-collapse: collapse; width: 100%; font: 0.85rem var(--font-data); font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--muted); font-weight: 500; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: var(--bg); }
+tr.sel td { color: var(--trace); font-weight: 500; }
+.foot { color: var(--muted); font-size: 0.8rem; }
+@media (prefers-reduced-motion: no-preference) { .gauge .v { transition: color 0.2s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Pi Pavoni Shots</h1>
+      <p class="sub">Pressure traces from the La Pavoni, logged by the Pico. Pick a shot.</p>
+    </div>
+    <div class="controls">
+      <label for="shot">Shot
+        <select id="shot"></select>
+      </label>
+      <div class="steps">
+        <button id="prev" type="button" aria-label="Previous shot">&larr;</button>
+        <button id="next" type="button" aria-label="Next shot">&rarr;</button>
+      </div>
+      <label for="compare">Compare with
+        <select id="compare"></select>
+      </label>
+      <button type="button" id="add-shot" hidden>Add shot</button>
+      <input type="file" id="shot-file" accept=".csv,text/csv" hidden>
+    </div>
+  </header>
+
+  <section class="card upload" id="upload" hidden aria-labelledby="upload-title">
+    <div class="card-head">
+      <h2 id="upload-title">Add a shot</h2>
+      <span class="status" id="upload-state" aria-live="polite"></span>
+    </div>
+    <p class="upload-summary" id="upload-summary"></p>
+    <div class="upload-row" id="upload-row">
+      <label for="upload-name">Save as
+        <input type="text" id="upload-name" maxlength="60" spellcheck="false">
+      </label>
+      <button type="button" class="primary" id="upload-save">Add shot</button>
+      <button type="button" id="upload-cancel">Cancel</button>
+    </div>
+  </section>
+
+  <section class="gauges" id="gauges" aria-label="Shot measurements"></section>
+
+  <div class="side-by-side">
+    <section class="card notes">
+      <div class="card-head">
+        <h2 id="notes-title">Setup and taste</h2>
+        <span class="status" id="save-state" aria-live="polite"></span>
+      </div>
+      <form id="notes-form" novalidate>
+        <div class="fields" id="fields"></div>
+        <div class="form-foot">
+          <span class="ratio" id="ratio"></span>
+          <button type="submit" class="primary" id="save">Save notes</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="chart-box">
+    <div class="chart-head">
+      <h2 id="chart-title">Pressure over time</h2>
+      <div class="legend" id="legend"></div>
+    </div>
+    <ul class="legend-shots" id="legend-shots"></ul>
+    <svg id="chart" role="img" aria-label="Pressure over time for the selected shot"></svg>
+    <div class="readout" id="readout" hidden></div>
+    <div class="table-scroll phase-rows">
+      <table>
+        <thead><tr><th>Phase</th><th>From</th><th>Lasted</th><th>&ge; 6 bar</th><th>Avg bar</th><th>Peak bar</th></tr></thead>
+        <tbody id="phase-rows"></tbody>
+      </table>
+      <p class="foot" id="phase-source"></p>
+    </div>
+  </section>
+  </div>
+
+  <section class="card">
+      <h2>All shots</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Shot</th><th>Peak bar</th><th>&ge; 6 bar</th><th>Avg there</th><th>&ge; 9 bar</th><th>In zone</th><th>Pre-inf.</th><th>Comments</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+  </section>
+
+  <p class="foot">t = 0 is where pressure first lifts off its resting level. Meaningful extraction: time at or above 6 bar. Areas are pressure &times; time above the resting baseline. Calibration is the rough datasheet line (0 V = 0 bar, 3.3 V = 16 bar) until the side-by-side gauge check.</p>
+</div>
+
+<script id="shot-analysis">
+// ---- ANALYSIS START: a port of analysis/shotlib.py, so uploaded shots get the same numbers ----
+// Keep in step with shotlib.py. A check that the two agree lives in analysis/check_viewer_analysis.py.
+const RULES = { TARGET_BAR: 9, THRESHOLD_BAR: 6, START_BAR: 1.0, SHOT_ON_BAR: 0.1, CONFIRM_BAR: 0.3,
+                CONFIRM_WINDOW: 35, END_S: 3.0, MAX_DRIP_S: 60.0 };
+const PHASE_NAMES = { i: "idle", p: "pre-infusion", e: "extraction", d: "dripping" };
+const PHASE_ORDER = ["pre-infusion", "extraction", "dripping"];
+
+function parseShotCsv(text) {
+  const lines = text.replace(/\r/g, "").split("\n").filter((l) => l.trim() !== "");
+  if (lines.length < 2) throw new Error("The file is empty.");
+  const head = lines[0].split(",").map((s) => s.trim());
+  const col = (n) => head.indexOf(n);
+  if (col("t") < 0 || col("bar") < 0) throw new Error("This doesn't look like a shot log from the Pico: it needs t and bar columns.");
+  const rows = lines.slice(1).map((l) => l.split(","));
+  const t = rows.map((r) => parseFloat(r[col("t")]));
+  const bar = rows.map((r) => parseFloat(r[col("bar")]));
+  const bad = t.findIndex((v, k) => !Number.isFinite(v) || !Number.isFinite(bar[k]));
+  if (bad >= 0) throw new Error(`Row ${bad + 2} has a t or bar value that isn't a number.`);
+  const phase = col("phase") < 0 ? null
+    : rows.map((r) => { const v = (r[col("phase")] || "").trim(); return PHASE_NAMES[v] || v; });
+  return { t, bar, phase };
+}
+
+// The Pico's phase rules replayed over a recording (shotlib.pico_phases): one letter per reading.
+function picoPhases(t, bar) {
+  const R = RULES, out = new Array(t.length).fill("i");
+  let phase = "i", armed = true, cand = null, first = 0, reached = false, lowSince = null, gotExt = false, dripStart = 0;
+  for (let k = 0; k < t.length; k++) {
+    const now = t[k], b = bar[k];
+    if (phase === "i") {
+      if (b <= R.SHOT_ON_BAR) { armed = true; cand = null; }
+      else if (armed) {
+        if (cand === null || k - cand >= R.CONFIRM_WINDOW) cand = k;
+        if (b >= R.CONFIRM_BAR) {
+          first = cand;
+          for (let j = cand; j <= k; j++) out[j] = "p";
+          phase = "p"; reached = false; lowSince = null; gotExt = false;
+        }
+      }
+      continue;
+    }
+    if (phase === "p" && b >= R.START_BAR) { phase = "e"; gotExt = true; }
+    else if (phase === "e") {
+      if (b >= R.THRESHOLD_BAR) reached = true;
+      if (b < (reached ? R.THRESHOLD_BAR : R.START_BAR)) { phase = "d"; dripStart = now; }
+    }
+    out[k] = phase;
+    lowSince = b < R.SHOT_ON_BAR ? (lowSince !== null ? lowSince : now) : null;
+    if ((lowSince !== null && now - lowSince >= R.END_S) || (phase === "d" && now - dripStart >= R.MAX_DRIP_S)) {
+      if (!gotExt) for (let j = first; j <= k; j++) out[j] = "i";
+      phase = "i"; armed = b <= R.SHOT_ON_BAR; cand = null;
+    }
+  }
+  return out;
+}
+
+const mean = (xs) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN;
+const round = (x, d) => Math.round(x * 10 ** d) / 10 ** d;
+
+// shotlib.analyse + shotlib.phase_rows, for one parsed log -> the same shape the page embeds
+function analyseShot(parsed) {
+  const R = RULES;
+  const ph = parsed.phase || picoPhases(parsed.t, parsed.bar).map((c) => PHASE_NAMES[c]);
+  const first = ph.findIndex((p) => p !== "idle");
+  if (first < 0) throw new Error("No shot in this file: pressure never rose past 0.3 bar and into extraction.");
+  let last = ph.length - 1;
+  for (let k = first + 1; k < ph.length; k++) if (ph[k] === "idle") { last = k - 1; break; }
+  const before = [];
+  for (let k = 0; k < first; k++) if (ph[k] === "idle") before.push(parsed.bar[k]);
+  const baseline = before.length ? mean(before) : Math.min(...parsed.bar);
+
+  const t0 = parsed.t[first], T = [], B = [], P = [];
+  for (let k = first; k <= last; k++) { T.push(round(parsed.t[k] - t0, 2)); B.push(parsed.bar[k]); P.push(ph[k]); }
+  const n = T.length, end = T[n - 1];
+  const dt = T.map((v, k) => (k ? v - T[k - 1] : NaN));
+  const sumDt = (keep) => dt.reduce((a, d, k) => (k && keep(k) ? a + d : a), 0);
+  const tsWhere = (keep) => T.filter((_, k) => keep(k));
+  const minT = (keep) => { const v = tsWhere(keep); return v.length ? Math.min(...v) : NaN; };
+  const maxT = (keep) => { const v = tsWhere(keep); return v.length ? Math.max(...v) : NaN; };
+
+  const shotStart = minT((k) => B[k] >= R.START_BAR), shotEnd = maxT((k) => B[k] >= R.START_BAR);
+  if (!Number.isFinite(shotStart)) throw new Error("This shot never reached 1 bar, so there's no extraction to analyse.");
+  let peakK = 0;
+  for (let k = 1; k < n; k++) if (B[k] > B[peakK]) peakK = k;
+  const above = (k) => B[k] >= R.THRESHOLD_BAR;
+  const extStart = minT(above), extEnd = maxT(above);
+  const inZone = (k) => T[k] >= extStart && T[k] <= extEnd;
+  const extractionStart = minT((k) => P[k] === "extraction");
+  const dripStart = minT((k) => P[k] === "dripping");
+  const hasDrip = Number.isFinite(dripStart);
+  const excess = B.map((b) => Math.max(b - baseline, 0));
+  const area = (a, b) => {
+    let s = 0, prev = -1;
+    for (let k = 0; k < n; k++) {
+      if (T[k] < a || T[k] > b) continue;
+      if (prev >= 0) s += (T[k] - T[prev]) * (excess[k] + excess[prev]) / 2;
+      prev = k;
+    }
+    return s;
+  };
+  const zoneBars = B.filter((_, k) => inZone(k));
+  const metrics = {
+    baseline_bar: baseline,
+    preinfusion_s: extractionStart,
+    preinfusion_bar: mean(B.filter((_, k) => P[k] === "pre-infusion")),
+    extraction_s: (hasDrip ? dripStart : end) - extractionStart,
+    dripping_s: hasDrip ? end - dripStart : 0,
+    timer_s: hasDrip ? dripStart : end,
+    shot_duration_s: shotEnd - shotStart,
+    peak_bar: B[peakK],
+    peak_t: T[peakK],
+    meaningful_s: sumDt(above),
+    at_target_s: sumDt((k) => B[k] >= R.TARGET_BAR),
+    zone_mean_bar: mean(zoneBars),
+    extraction_start: extStart,
+    extraction_end: extEnd,
+    area_before: area(T[0], extStart),
+    area_extraction: area(extStart, extEnd),
+    area_after: area(extEnd, end),
+    area_total: area(T[0], end),
+  };
+  const phases = [];
+  for (const p of PHASE_ORDER) {
+    const ks = [];
+    for (let k = 0; k < n; k++) if (P[k] === p) ks.push(k);
+    if (!ks.length) continue;
+    const from = Math.min(...ks.map((k) => T[k])), to = Math.max(...ks.map((k) => T[k]));
+    const later = T.filter((v) => v > to);
+    const until = later.length ? Math.min(...later) : to;
+    phases.push({
+      phase: p,
+      from_s: round(from, 1),
+      duration_s: round(until - from, 1),
+      avg_bar: round(mean(ks.map((k) => B[k])), 2),
+      peak_bar: round(Math.max(...ks.map((k) => B[k])), 2),
+      meaningful_s: round(ks.reduce((a, k) => (k && B[k] >= R.THRESHOLD_BAR ? a + dt[k] : a), 0), 3),
+    });
+  }
+  return { t: T, bar: B.map((b) => round(b, 2)), phase: P, phases, metrics };
+}
+// ---- ANALYSIS END ----
+</script>
+
+<script>
+const DATA = /*SHOT_DATA*/null;
+const EMBEDDED = DATA.shots;
+let shots = EMBEDDED.slice();
+const TARGET = DATA.target, THRESHOLD = DATA.threshold;
+const $ = (id) => document.getElementById(id);
+const fmt = (v, d = 1) => Number(v).toFixed(d);
+const pct = (v) => Math.round(v * 100) + "%";
+const NS = "http://www.w3.org/2000/svg";
+
+let sel = shots.length - 1;
+let cmp = -1;
+
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+function fillSelects() {
+  const s = $("shot"), c = $("compare");
+  s.replaceChildren(); c.replaceChildren();
+  shots.forEach((sh, i) => s.add(new Option(sh.name, i)));
+  c.add(new Option("nothing", -1));
+  shots.forEach((sh, i) => c.add(new Option(sh.name, i)));
+}
+
+function setupSelects() {
+  fillSelects();
+  const s = $("shot"), c = $("compare");
+  s.addEventListener("change", () => { sel = +s.value; render(); });
+  c.addEventListener("change", () => { cmp = +c.value; render(); });
+  $("prev").addEventListener("click", () => { sel = (sel - 1 + shots.length) % shots.length; render(); });
+  $("next").addEventListener("click", () => { sel = (sel + 1) % shots.length; render(); });
+}
+
+function gauge(key, value, unit, detail, cls) {
+  const g = document.createElement("div");
+  g.className = "gauge";
+  const k = document.createElement("span"); k.className = "k"; k.textContent = key;
+  const v = document.createElement("span"); v.className = "v" + (cls ? " " + cls : "");
+  v.textContent = value;
+  if (unit) { const u = document.createElement("small"); u.textContent = unit; v.appendChild(u); }
+  const d = document.createElement("span"); d.className = "d"; d.textContent = detail;
+  g.append(k, v, d);
+  return g;
+}
+
+function renderGauges(m, phases) {
+  const box = $("gauges"); box.replaceChildren();
+  const ext = phases.find((p) => p.phase === "extraction");
+  const peakCls = m.peak_bar >= TARGET ? "ok" : m.peak_bar >= THRESHOLD ? "warn" : "bad";
+  const zoneCls = m.meaningful_s >= 20 ? "ok" : m.meaningful_s >= 10 ? "warn" : "bad";
+  const other = m.area_before + m.area_after;
+  box.append(
+    gauge("Peak", fmt(m.peak_bar, 2), "bar", `at ${fmt(m.peak_t)} s into the shot`, peakCls),
+    gauge("Meaningful extraction", fmt(m.meaningful_s), "s",
+          ext ? `of ${fmt(ext.duration_s)} s extraction (${pct(m.meaningful_s / ext.duration_s)}), at or above ${THRESHOLD} bar`
+              : `at or above ${THRESHOLD} bar`, zoneCls),
+    gauge("Avg in that zone", fmt(m.zone_mean_bar, 2), "bar", `${fmt(m.at_target_s)} s at or above ${TARGET} bar`),
+    gauge("Area in zone", pct(m.area_extraction / m.area_total), "", `${fmt(m.area_extraction, 0)} vs ${fmt(other, 0)} bar·s other`),
+    gauge("Pre-infusion", fmt(m.preinfusion_s), "s", `at ${fmt(m.preinfusion_bar, 2)} bar`),
+    gauge("Shot timer", fmt(m.timer_s), "s", "pre-infusion + extraction, as on the screen"),
+  );
+}
+
+function renderLegend(sh, other) {
+  // shaded areas: small chips beside the title
+  const lg = $("legend"); lg.replaceChildren();
+  const chip = (color, text) => {
+    const s = document.createElement("span");
+    const i = document.createElement("i");
+    i.style.background = color;
+    s.append(i, document.createTextNode(text));
+    lg.appendChild(s);
+  };
+  chip("var(--zone-fill)", `≥ ${THRESHOLD} bar zone`);
+  chip("var(--rest-fill)", "rest of the shot");
+
+  // each plotted shot: its line style, name and comment
+  const box = $("legend-shots"); box.replaceChildren();
+  const row = (s, ghost) => {
+    const li = document.createElement("li");
+    const sw = document.createElement("span"); sw.className = "swatch" + (ghost ? " ghost" : "");
+    const name = document.createElement("span"); name.className = "name"; name.textContent = s.name;
+    const comment = document.createElement("span");
+    const text = notesFor(s).comments || "";
+    comment.className = "comment" + (text ? "" : " none");
+    comment.textContent = text || "no comment yet";
+    li.append(sw, name, comment);
+    box.appendChild(li);
+  };
+  row(sh, false);
+  if (other) row(other, true);
+}
+
+function renderChart(sh, other) {
+  const svg = $("chart");
+  svg.replaceChildren();
+  const W = Math.max(320, svg.parentElement.clientWidth - 28);
+  // phase strips above the plot: a full one for the shot, a thinner one for the compared shot
+  const STRIP = 18, STRIP_THIN = 10, GAP = 4;
+  const stripsH = STRIP + (other ? GAP + STRIP_THIN : 0) + 8;
+  const H = Math.round(Math.min(380, Math.max(240, W * 0.42))) + stripsH;
+  const pad = { l: 38, r: 14, t: 12 + stripsH, b: 30 };
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+  const m = sh.metrics;
+  const lines = [sh].concat(other ? [other] : []);
+  const xMax = Math.max(...lines.map((s) => s.t[s.t.length - 1]));
+  const yMax = Math.ceil(Math.max(TARGET, ...lines.map((s) => s.metrics.peak_bar)) + 1);
+  const x = (t) => pad.l + (t / xMax) * (W - pad.l - pad.r);
+  const y = (b) => H - pad.b - (b / yMax) * (H - pad.t - pad.b);
+
+  // grid and axes
+  for (let b = 0; b <= yMax; b += 2) {
+    el("line", { x1: pad.l, x2: W - pad.r, y1: y(b), y2: y(b), stroke: "var(--line)", "stroke-width": 1 }, svg);
+    const t = el("text", { x: pad.l - 6, y: y(b) + 4, "text-anchor": "end" }, svg); t.textContent = b;
+  }
+  const step = xMax > 120 ? 20 : 10;
+  for (let s = 0; s <= xMax; s += step) {
+    const t = el("text", { x: x(s), y: H - pad.b + 16, "text-anchor": "middle" }, svg); t.textContent = s;
+  }
+  const xl = el("text", { x: W - pad.r, y: H - 2, "text-anchor": "end" }, svg); xl.textContent = "seconds into shot";
+
+  // areas: zone vs rest, both from the resting baseline up to the trace
+  const base = m.baseline_bar;
+  const area = (keep) => {
+    const pts = sh.t.map((t, i) => [t, sh.bar[i]]).filter(([t]) => keep(t));
+    if (pts.length < 2) return;
+    const d = `M${x(pts[0][0])},${y(base)} ` + pts.map(([t, b]) => `L${x(t)},${y(Math.max(b, base))}`).join(" ")
+      + ` L${x(pts[pts.length - 1][0])},${y(base)} Z`;
+    return d;
+  };
+  const s0 = m.extraction_start, s1 = m.extraction_end;
+  for (const d of [area((t) => t <= s0), area((t) => t >= s1)]) if (d) el("path", { d, fill: "var(--rest-fill)", stroke: "none" }, svg);
+  const dz = area((t) => t >= s0 && t <= s1);
+  if (dz) el("path", { d: dz, fill: "var(--zone-fill)", stroke: "none" }, svg);
+
+  // phases: strips across the top, and a faint line down the plot where each of the shot's phases starts
+  const strip = (s, top, h, withLabels) => {
+    for (const p of s.phases) {
+      const x0 = x(Math.min(p.from_s, xMax)), x1 = x(Math.min(p.from_s + p.duration_s, xMax));
+      if (x1 - x0 < 1) continue;
+      el("rect", { x: x0, y: top, width: x1 - x0, height: h, fill: PHASE_COLOURS[p.phase], opacity: withLabels ? 0.9 : 0.6 }, svg);
+      // inside extraction: the stretch at or above 6 bar, darker
+      if (p.phase === "extraction" && s.metrics.extraction_start === s.metrics.extraction_start) {
+        const z0 = x(Math.max(p.from_s, s.metrics.extraction_start));
+        const z1 = x(Math.min(p.from_s + p.duration_s, s.metrics.extraction_end, xMax));
+        if (z1 > z0) el("rect", { x: z0, y: top, width: z1 - z0, height: h, fill: "var(--ph-ext-strong)" }, svg);
+      }
+      if (withLabels) {
+        const label = p.phase.charAt(0).toUpperCase() + p.phase.slice(1);
+        const full = p.phase === "extraction" && p.meaningful_s > 0
+          ? `${label} ${fmt(p.duration_s)} s · ${fmt(p.meaningful_s)} s meaningful`
+          : `${label} ${fmt(p.duration_s)} s`;
+        const mid = `${label} ${fmt(p.duration_s)} s`;
+        // the widest label that fits its band: full, then name and duration, then name, then nothing
+        const fits = (txt) => txt.length * 6.6 + 8 <= x1 - x0;
+        const text = fits(full) ? full : fits(mid) ? mid : fits(label) ? label : "";
+        if (text) {
+          const t = el("text", { x: (x0 + x1) / 2, y: top + h / 2 + 4, "text-anchor": "middle" }, svg);
+          t.textContent = text; t.style.fill = "var(--panel)"; t.style.fontWeight = "500";
+        }
+      }
+    }
+  };
+  strip(sh, 4, STRIP, true);
+  if (other) {
+    strip(other, 4 + STRIP + GAP, STRIP_THIN, false);
+    const t = el("text", { x: pad.l - 6, y: 4 + STRIP + GAP + STRIP_THIN - 1, "text-anchor": "end" }, svg);
+    t.textContent = "vs"; t.style.fontSize = "10px";
+  }
+  for (const p of sh.phases) {
+    if (p.from_s <= 0 || p.from_s > xMax) continue;
+    el("line", { x1: x(p.from_s), x2: x(p.from_s), y1: 4, y2: H - pad.b, stroke: PHASE_COLOURS[p.phase],
+                 "stroke-width": 1, "stroke-dasharray": "2 3", opacity: 0.8 }, svg);
+  }
+
+  // reference lines
+  const ref = (b, color, label) => {
+    el("line", { x1: pad.l, x2: W - pad.r, y1: y(b), y2: y(b), stroke: color, "stroke-width": 1.2, "stroke-dasharray": "3 4" }, svg);
+    const t = el("text", { x: pad.l + 6, y: y(b) - 5 }, svg); t.textContent = label; t.style.fill = color;
+  };
+  ref(TARGET, "var(--target)", `target ${TARGET} bar`);
+  ref(THRESHOLD, "var(--zone)", `meaningful ${THRESHOLD} bar`);
+
+  // traces
+  const path = (s) => s.t.map((t, i) => `${i ? "L" : "M"}${x(t)},${y(s.bar[i])}`).join(" ");
+  if (other) el("path", { d: path(other), fill: "none", stroke: "var(--ghost)", "stroke-width": 1.5, "stroke-dasharray": "5 4" }, svg);
+  el("path", { d: path(sh), fill: "none", stroke: "var(--trace)", "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+
+  // peak
+  el("circle", { cx: x(m.peak_t), cy: y(m.peak_bar), r: 4.5, fill: "var(--peak)" }, svg);
+  const pl = el("text", { x: x(m.peak_t) + 8, y: y(m.peak_bar) - 6 }, svg);
+  pl.textContent = `${fmt(m.peak_bar, 2)} bar`; pl.style.fill = "var(--peak)";
+
+  // hover readout
+  const cursor = el("line", { y1: pad.t, y2: H - pad.b, stroke: "var(--muted)", "stroke-width": 1, visibility: "hidden" }, svg);
+  const dot = el("circle", { r: 4, fill: "var(--trace)", visibility: "hidden" }, svg);
+  const readout = $("readout");
+  const hit = el("rect", { x: pad.l, y: pad.t, width: W - pad.l - pad.r, height: H - pad.t - pad.b, fill: "transparent" }, svg);
+  const move = (ev) => {
+    const r = svg.getBoundingClientRect();
+    const px = ((ev.clientX - r.left) / r.width) * W;
+    const t = ((px - pad.l) / (W - pad.l - pad.r)) * xMax;
+    let i = 0, best = Infinity;
+    sh.t.forEach((tt, j) => { const dd = Math.abs(tt - t); if (dd < best) { best = dd; i = j; } });
+    const cx = x(sh.t[i]), cy = y(sh.bar[i]);
+    cursor.setAttribute("x1", cx); cursor.setAttribute("x2", cx); cursor.setAttribute("visibility", "visible");
+    dot.setAttribute("cx", cx); dot.setAttribute("cy", cy); dot.setAttribute("visibility", "visible");
+    readout.textContent = `${fmt(sh.t[i])} s  ·  ${fmt(sh.bar[i], 2)} bar  ·  ${sh.phase[i]}`;
+    readout.hidden = false;
+    const box = svg.parentElement.getBoundingClientRect();
+    const left = (cx / W) * r.width + (r.left - box.left);
+    readout.style.left = Math.min(Math.max(left - readout.offsetWidth / 2, 4), box.width - readout.offsetWidth - 4) + "px";
+    readout.style.top = ((cy / H) * r.height + (r.top - box.top) - 34) + "px";
+  };
+  hit.addEventListener("pointermove", move);
+  hit.addEventListener("pointerleave", () => {
+    cursor.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden"); readout.hidden = true;
+  });
+
+  $("chart-title").textContent = other ? `${sh.name} vs ${other.name}` : `${sh.name}: pressure over time`;
+}
+
+// ---- notes: saved to the artifact's own database (db capability) ----
+const FIELDS = [
+  ["beans", "Beans", "text", "e.g. Lidl espresso"],
+  ["roast", "Roast", "text", "light, medium, dark"],
+  ["freshness", "Freshness", "text", "roast date, or fresh"],
+  ["grind_setting", "Grind setting", "text", "e.g. 3"],
+  ["dose_g", "Dose (g)", "number", "coffee in"],
+  ["yield_g", "Yield (g)", "number", "espresso out"],
+  ["basket", "Basket", "text", "small or large", true],
+  ["comments", "Comments", "textarea", "how it tasted, what you changed, anything you noticed", true],
+];
+let store = null;        // db namespace, once the viewer grants it
+let readOnly = false;
+let savedNotes = {};     // shot name -> saved fields, live from the database
+const drafts = {};       // shot name -> unsaved edits, kept while switching shots
+
+function buildForm() {
+  const box = $("fields");
+  for (const [key, label, type, hint, wide] of FIELDS) {
+    const l = document.createElement("label");
+    l.htmlFor = "f-" + key;
+    if (wide) l.className = "wide";
+    l.append(document.createTextNode(label));
+    const input = document.createElement(type === "textarea" ? "textarea" : "input");
+    input.id = "f-" + key; input.name = key; input.placeholder = hint;
+    if (type === "textarea") input.rows = 2;
+    if (type === "number") { input.type = "number"; input.min = "0"; input.step = "0.1"; input.inputMode = "decimal"; }
+    if (type === "text") input.type = "text";
+    l.appendChild(input);
+    box.appendChild(l);
+  }
+  $("notes-form").addEventListener("input", () => {
+    drafts[shots[sel].name] = readForm();
+    setStatus("Unsaved changes", "dirty");
+    showRatio(drafts[shots[sel].name]);
+  });
+  $("notes-form").addEventListener("submit", saveNotes);
+}
+
+function readForm() {
+  const out = {};
+  for (const [key] of FIELDS) out[key] = $("f-" + key).value.trim();
+  return out;
+}
+
+// older notes kept taste and other notes separately: read them as one comment
+function withComments(n) {
+  if (!n || n.comments !== undefined) return n || {};
+  return { ...n, comments: [n.taste, n.notes].filter(Boolean).join(". ") };
+}
+
+function notesFor(sh) {
+  return drafts[sh.name] || withComments(savedNotes[sh.name] || sh.notes);
+}
+
+function showRatio(n) {
+  const d = parseFloat(n.dose_g), y = parseFloat(n.yield_g);
+  const r = $("ratio"); r.replaceChildren();
+  if (d > 0 && y > 0) {
+    r.append(document.createTextNode(`1:${fmt(y / d)} `));
+    const s = document.createElement("small"); s.textContent = `brew ratio (${n.dose_g} g in, ${n.yield_g} g out)`;
+    r.appendChild(s);
+  } else {
+    const s = document.createElement("small"); s.textContent = "add dose and yield for the brew ratio";
+    r.appendChild(s);
+  }
+}
+
+function setStatus(text, cls) {
+  const s = $("save-state"); s.textContent = text; s.className = "status" + (cls ? " " + cls : "");
+}
+
+function renderNotes(sh) {
+  const n = notesFor(sh);
+  for (const [key] of FIELDS) $("f-" + key).value = n[key] || "";
+  showRatio(n);
+  $("notes-title").textContent = `Setup and taste: ${sh.name}`;
+  const editable = !!store && !readOnly;
+  for (const [key] of FIELDS) $("f-" + key).disabled = !editable;
+  $("save").disabled = !editable;
+  if (drafts[sh.name]) setStatus("Unsaved changes", "dirty");
+  else if (!store) setStatus("Open the published page to edit notes");
+  else if (readOnly) setStatus("You can read these notes but not change them");
+  else setStatus(savedNotes[sh.name] && savedNotes[sh.name].updated_at
+    ? "Saved " + new Date(savedNotes[sh.name].updated_at).toLocaleString() : "Not saved yet");
+}
+
+async function saveNotes(ev) {
+  ev.preventDefault();
+  if (!store || readOnly) return;
+  const sh = shots[sel];
+  const body = { ...readForm(), updated_at: new Date().toISOString() };
+  $("save").disabled = true;
+  setStatus("Saving…");
+  try {
+    await store.doc("notes/" + sh.name).set(body);
+    delete drafts[sh.name];
+    savedNotes[sh.name] = body;
+    setStatus("Saved", "saved");
+    renderTable();
+  } catch (e) {
+    if (e && e.code === "invalid_argument") {
+      readOnly = true;
+      setStatus("You can read these notes but not change them", "err");
+    } else if (e && e.code === "unavailable") {
+      setStatus("Couldn't reach the notes store. Try Save again in a moment.", "err");
+    } else {
+      setStatus("Couldn't save: " + ((e && e.message) || "unknown error"), "err");
+    }
+  } finally {
+    $("save").disabled = !store || readOnly;
+  }
+}
+
+async function connectStore() {
+  if (!window.claude || !window.claude.use) return;   // a saved local copy of the page
+  const db = await window.claude.use("db");
+  if (!db) { renderNotes(shots[sel]); return; }
+  store = db;
+  const user = await window.claude.use("user");
+  if (user && (await user.can("data.write")) === false) readOnly = true;
+  // one subscription for the page's lifetime: every saved note, live
+  db.collection("notes").onSnapshot((snap) => {
+    savedNotes = {};
+    for (const d of snap.docs) savedNotes[d.id] = d.data();
+    // don't refill the form under someone mid-edit
+    if (!drafts[shots[sel].name]) renderNotes(shots[sel]);
+    renderLegend(shots[sel], cmp >= 0 && cmp !== sel ? shots[cmp] : null);
+    renderTable();
+  }, () => {
+    setStatus("Notes stopped updating. Reload the page to reconnect.", "err");
+  });
+  // and one for uploaded shots: each document is a log file's text, analysed here
+  db.collection("shots").onSnapshot((snap) => {
+    uploaded = [];
+    for (const d of snap.docs) {
+      try {
+        const shot = analyseShot(parseShotCsv(d.data().csv || ""));
+        uploaded.push({ ...shot, name: d.id, notes: {}, uploaded: true });
+      } catch (e) { /* a log that no longer parses is left out */ }
+    }
+    refreshShots();
+  }, () => {
+    setStatus("Uploaded shots stopped updating. Reload the page to reconnect.", "err");
+  });
+  $("add-shot").hidden = readOnly;
+  renderNotes(shots[sel]);
+}
+
+const PHASE_COLOURS = { "pre-infusion": "var(--ph-pre)", "extraction": "var(--ph-ext)", "dripping": "var(--ph-drip)" };
+
+function renderPhases(sh) {
+  const tb = $("phase-rows"); tb.replaceChildren();
+  for (const p of sh.phases) {
+    const tr = document.createElement("tr");
+    const name = document.createElement("td");
+    const dot = document.createElement("span"); dot.className = "phase-dot"; dot.style.background = PHASE_COLOURS[p.phase] || "var(--muted)";
+    name.append(dot, document.createTextNode(p.phase));
+    tr.appendChild(name);
+    const meaningful = p.meaningful_s > 0
+      ? `${fmt(p.meaningful_s)} s (${pct(p.meaningful_s / p.duration_s)})` : "–";
+    for (const c of [fmt(p.from_s) + " s", fmt(p.duration_s) + " s", meaningful, fmt(p.avg_bar, 2), fmt(p.peak_bar, 2)]) {
+      const td = document.createElement("td"); td.textContent = c; tr.appendChild(td);
+    }
+    tb.appendChild(tr);
+  }
+  $("phase-source").textContent = "From the log's phase column (p, e, d). Shots logged before the Pico tracked phases were backfilled with the same rules.";
+}
+
+function renderTable() {
+  const tb = $("rows"); tb.replaceChildren();
+  shots.forEach((sh, i) => {
+    const m = sh.metrics;
+    const tr = document.createElement("tr");
+    if (i === sel) tr.className = "sel";
+    const nameCell = document.createElement("td");
+    nameCell.textContent = sh.name;
+    if (sh.uploaded) {
+      const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = "uploaded";
+      nameCell.appendChild(tag);
+      if (store && !readOnly) nameCell.appendChild(removeButton(sh));
+    }
+    tr.appendChild(nameCell);
+    const cells = [fmt(m.peak_bar, 2), fmt(m.meaningful_s) + " s", fmt(m.zone_mean_bar, 2),
+                   fmt(m.at_target_s) + " s", pct(m.area_extraction / m.area_total), fmt(m.preinfusion_s) + " s"];
+    for (const c of cells) { const td = document.createElement("td"); td.textContent = c; tr.appendChild(td); }
+    const taste = document.createElement("td");
+    taste.className = "taste";
+    taste.textContent = withComments(savedNotes[sh.name] || sh.notes).comments || "";
+    taste.title = taste.textContent;
+    tr.appendChild(taste);
+    tr.addEventListener("click", () => { sel = i; render(); });
+    tb.appendChild(tr);
+  });
+}
+
+// ---- uploaded shots: kept in the page's database as the original CSV text ----
+const MAX_CSV_BYTES = 240000;   // a stored document holds 256 KB: ~10,000 readings, over half an hour of logging
+let uploaded = [];               // analysed shots from the database
+let pendingUpload = null;        // { text, shot } while the panel is open
+let selectAfterRefresh = null;   // a just-saved shot to select once it arrives
+
+const cleanName = (name) => name.trim().replace(/\.csv$/i, "").replace(/[^A-Za-z0-9_.~:@+-]/g, "_").slice(0, 60);
+const nameTaken = (name) => shots.some((s) => s.name === name);
+const nameOk = (name) => name.length > 0 && !/^\.+$/.test(name) && !nameTaken(name);
+
+function refreshShots() {
+  const selName = shots[sel] && shots[sel].name;
+  const cmpName = cmp >= 0 && shots[cmp] ? shots[cmp].name : null;
+  const builtIn = new Set(EMBEDDED.map((s) => s.name));   // a shot added to the repo wins over its upload
+  shots = EMBEDDED.concat(uploaded.filter((u) => !builtIn.has(u.name)))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  const want = selectAfterRefresh || selName;
+  sel = Math.max(0, shots.findIndex((s) => s.name === want));
+  if (shots[sel].name === selectAfterRefresh) selectAfterRefresh = null;
+  cmp = cmpName ? shots.findIndex((s) => s.name === cmpName) : -1;
+  fillSelects();
+  render();
+}
+
+function setUploadState(text, cls) {
+  const s = $("upload-state"); s.textContent = text; s.className = "status" + (cls ? " " + cls : "");
+}
+
+function closeUpload() { $("upload").hidden = true; pendingUpload = null; }
+
+function checkUploadName() {
+  const typed = $("upload-name").value.trim(), name = cleanName(typed);
+  $("upload-save").disabled = !pendingUpload || !nameOk(name);
+  if (!pendingUpload) return;
+  if (name && nameTaken(name)) setUploadState(`There's already a shot called ${name}. Pick another name.`, "err");
+  else if (name && name !== typed) setUploadState(`Will be saved as ${name}`);
+  else setUploadState("");
+}
+
+async function openUpload(file) {
+  $("upload").hidden = false;
+  pendingUpload = null;
+  $("upload-name").disabled = true;
+  $("upload-save").disabled = true;
+  setUploadState("");
+  const summary = $("upload-summary");
+  const fail = (text) => { summary.textContent = text; setUploadState("Can't add this file", "err"); };
+  if (file.size > MAX_CSV_BYTES) {
+    return fail(`${file.name} is ${Math.round(file.size / 1000)} KB. The page can keep logs up to ${MAX_CSV_BYTES / 1000} KB, about half an hour of logging.`);
+  }
+  let text, parsed, shot;
+  try { text = await file.text(); } catch (e) { return fail("Couldn't read that file."); }
+  try { parsed = parseShotCsv(text); shot = analyseShot(parsed); } catch (e) { return fail(`${file.name}: ${e.message}`); }
+  const m = shot.metrics;
+  summary.textContent = `${file.name}: ${parsed.t.length} readings. Shot timer ${fmt(m.timer_s)} s, peak ${fmt(m.peak_bar, 2)} bar, `
+    + `${fmt(m.meaningful_s)} s at or above ${THRESHOLD} bar.`
+    + (parsed.phase ? "" : " This log has no phase column, so its phases were worked out with the Pico's rules.");
+  pendingUpload = { text, shot };
+  $("upload-name").disabled = false;
+  $("upload-name").value = cleanName(file.name);
+  checkUploadName();
+  $("upload-name").focus();
+}
+
+async function saveUpload() {
+  const name = cleanName($("upload-name").value);
+  if (!pendingUpload || !nameOk(name) || !store) return;
+  $("upload-save").disabled = true;
+  setUploadState("Saving…");
+  selectAfterRefresh = name;   // the database listener adds it, then selects it (it can arrive before set() returns)
+  try {
+    await store.doc("shots/" + name).set({ csv: pendingUpload.text, uploaded_at: new Date().toISOString() });
+    closeUpload();
+  } catch (e) {
+    selectAfterRefresh = null;
+    $("upload-save").disabled = false;
+    setUploadState(e && e.code === "quota_exceeded" ? "The page's storage is full. Remove an uploaded shot first."
+      : e && e.code === "invalid_argument" ? "You can view shots here but not add them."
+      : "Couldn't save the shot. Try again in a moment.", "err");
+  }
+}
+
+function removeButton(sh) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "link"; b.textContent = "remove";
+  b.setAttribute("aria-label", `Remove uploaded shot ${sh.name}`);
+  b.addEventListener("click", async (ev) => {
+    ev.stopPropagation();   // don't also select the row
+    if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "click again to remove"; return; }
+    b.disabled = true;
+    try { await store.doc("shots/" + sh.name).delete(); }
+    catch (e) { b.disabled = false; b.textContent = "couldn't remove, try again"; }
+  });
+  return b;
+}
+
+function setupUpload() {
+  $("add-shot").addEventListener("click", () => $("shot-file").click());
+  $("shot-file").addEventListener("change", async (ev) => {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = "";   // so picking the same file again still opens it
+    if (file) await openUpload(file);
+  });
+  $("upload-name").addEventListener("input", checkUploadName);
+  $("upload-name").addEventListener("keydown", (ev) => { if (ev.key === "Enter") saveUpload(); });
+  $("upload-cancel").addEventListener("click", closeUpload);
+  $("upload-save").addEventListener("click", saveUpload);
+}
+
+function render() {
+  const sh = shots[sel];
+  const other = cmp >= 0 && cmp !== sel ? shots[cmp] : null;
+  $("shot").value = sel;
+  $("compare").value = cmp;
+  renderGauges(sh.metrics, sh.phases);
+  renderLegend(sh, other);
+  renderChart(sh, other);
+  renderPhases(sh);
+  renderNotes(sh);
+  renderTable();
+}
+
+setupSelects();
+setupUpload();
+buildForm();
+render();
+connectStore();
+let resizeTimer;
+window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 120); });
+</script>

@@ -1,0 +1,921 @@
+<title>Pi Pavoni Shots</title>
+<meta charset="utf-8">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+/* Layout: one column of instrument readouts. Controls, then gauges (tiles), then the trace, then the shot's notes and the full logbook. */
+:root {
+  --bg: #f3f1ef;
+  --panel: #fbfaf9;
+  --fg: #1d1814;
+  --muted: #6c625a;
+  --line: #ddd5ce;
+  --trace: #5b3420;        /* espresso brown: the selected shot */
+  --ghost: #9a8f86;        /* comparison shot */
+  --zone: #d98a1f;         /* >= 6 bar, meaningful extraction */
+  --zone-fill: rgba(217, 138, 31, 0.28);
+  --rest-fill: rgba(108, 98, 90, 0.16);
+  --target: #2e8a58;       /* 9 bar */
+  --peak: #c0392b;
+  --ph-pre: #6f9ed8;       /* phases, same hues as the Pico's screen */
+  --ph-ext: #d98a1f;
+  --ph-ext-strong: #a35f0c; /* the >= 6 bar stretch inside extraction */
+  --ph-drip: #9a8f86;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", sans-serif-condensed, system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14110f; --panel: #1c1815; --fg: #eee7e1; --muted: #a59a90; --line: #352e29;
+    --trace: #e0a878; --ghost: #7d736b; --zone: #e9a447; --zone-fill: rgba(233, 164, 71, 0.24);
+    --rest-fill: rgba(165, 154, 144, 0.14); --target: #57c08a; --peak: #f0705f;
+    --ph-pre: #82b2ee; --ph-ext: #e9a447; --ph-ext-strong: #b8741f; --ph-drip: #8a8078;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14110f; --panel: #1c1815; --fg: #eee7e1; --muted: #a59a90; --line: #352e29;
+  --trace: #e0a878; --ghost: #7d736b; --zone: #e9a447; --zone-fill: rgba(233, 164, 71, 0.24);
+  --rest-fill: rgba(165, 154, 144, 0.14); --target: #57c08a; --peak: #f0705f;
+  --ph-pre: #82b2ee; --ph-ext: #e9a447; --ph-ext-strong: #b8741f; --ph-drip: #8a8078;
+  color-scheme: dark;
+}
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); line-height: 1.45; }
+.wrap {
+  max-width: 1600px; margin: 0 auto;
+  padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: flex; flex-direction: column; gap: 20px;
+}
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px; }
+h1 { font-family: var(--font-display); font-weight: 600; font-size: 1.9rem; letter-spacing: 0.01em; margin: 0; text-wrap: balance; }
+.sub { color: var(--muted); margin: 2px 0 0; font-size: 0.95rem; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: end; }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+select, button {
+  font: 500 0.95rem var(--font-data); color: var(--fg); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px;
+}
+button { cursor: pointer; }
+select:focus-visible, button:focus-visible { outline: 2px solid var(--trace); outline-offset: 2px; }
+.steps { display: flex; gap: 6px; }
+
+.gauges { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.gauge { background: var(--panel); padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.gauge .k { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+.gauge .v { font-family: var(--font-display); font-weight: 600; font-size: 1.7rem; font-variant-numeric: tabular-nums; }
+.gauge .v small { font-family: var(--font-data); font-weight: 400; font-size: 0.8rem; color: var(--muted); margin-left: 3px; }
+.gauge .d { font-family: var(--font-data); font-size: 0.78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.pill { display: inline-block; font: 500 0.72rem var(--font-data); padding: 1px 7px; border-radius: 99px; border: 1px solid currentColor; }
+.ok { color: var(--target); } .warn { color: var(--zone); } .bad { color: var(--peak); }
+
+.chart-box { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px 14px 8px; position: relative; min-width: 0; }
+.chart-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline; }
+h2 { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; margin: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 0.78rem var(--font-data); color: var(--muted); }
+.legend i { display: inline-block; width: 14px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: middle; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { font-family: var(--font-data); font-size: 11px; fill: var(--muted); }
+.readout { position: absolute; pointer-events: none; font: 0.8rem var(--font-data); background: var(--fg); color: var(--bg); padding: 4px 8px; border-radius: 5px; white-space: nowrap; }
+
+.side-by-side { display: grid; grid-template-columns: minmax(260px, 1fr) minmax(0, 2.4fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .side-by-side { grid-template-columns: minmax(0, 1fr); } .side-by-side .notes { order: 1; } }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 14px; min-width: 0; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; margin-top: 12px; }
+.fields .wide { grid-column: 1 / -1; }
+.fields label { text-transform: none; letter-spacing: 0; font-size: 0.78rem; }
+input, textarea {
+  font: 0.92rem var(--font-body); color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; width: 100%; box-sizing: border-box; min-width: 0;
+}
+textarea { resize: vertical; min-height: 2.6em; }
+input:focus-visible, textarea:focus-visible { outline: 2px solid var(--trace); outline-offset: 1px; }
+input:disabled, textarea:disabled { opacity: 0.6; }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 0.75; }
+.form-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+.ratio { font: 500 0.95rem var(--font-data); }
+.ratio small { color: var(--muted); font-weight: 400; }
+button.primary { background: var(--trace); color: var(--bg); border-color: var(--trace); }
+button:disabled { opacity: 0.55; cursor: default; }
+.status { font: 0.8rem var(--font-data); color: var(--muted); }
+.status.saved { color: var(--target); } .status.err { color: var(--peak); } .status.dirty { color: var(--zone); }
+td.taste { max-width: 14em; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.upload-summary { margin: 8px 0 0; font-size: 0.92rem; }
+.upload-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; margin-top: 10px; }
+.upload-row label { text-transform: none; letter-spacing: 0; font-size: 0.78rem; flex: 1 1 14em; }
+.tag { font: 500 0.68rem var(--font-data); color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 0 6px; margin-left: 6px; }
+button.link { background: none; border: none; padding: 0 2px; color: var(--muted); font: 0.75rem var(--font-data); text-decoration: underline; }
+button.link.armed { color: var(--peak); }
+.phase-rows { margin-top: 8px; border-top: 1px solid var(--line); }
+.phase-rows .foot { margin: 6px 0 0; }
+.phase-dot { display: inline-block; width: 8px; height: 8px; border-radius: 99px; margin-right: 7px; vertical-align: middle; }
+
+/* legend: one row per plotted shot, with that shot's comment beside it */
+.legend-shots { list-style: none; margin: 8px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.legend-shots li { display: grid; grid-template-columns: 22px auto minmax(0, 1fr); gap: 8px; align-items: baseline; font-size: 0.9rem; }
+.legend-shots .swatch { height: 0; border-top: 3px solid var(--trace); align-self: center; }
+.legend-shots .swatch.ghost { border-top: 2px dashed var(--ghost); }
+.legend-shots .name { font: 500 0.85rem var(--font-data); white-space: nowrap; }
+.legend-shots .comment { color: var(--muted); overflow-wrap: anywhere; }
+.legend-shots .comment.none { font-style: italic; opacity: 0.8; }
+.table-scroll { overflow-x: auto; margin-top: 10px; }
+table { border-collapse: collapse; width: 100%; font: 0.85rem var(--font-data); font-variant-numeric: tabular-nums; }
+th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--muted); font-weight: 500; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
+tbody tr { cursor: pointer; }
+tbody tr:hover td { background: var(--bg); }
+tr.sel td { color: var(--trace); font-weight: 500; }
+.foot { color: var(--muted); font-size: 0.8rem; }
+@media (prefers-reduced-motion: no-preference) { .gauge .v { transition: color 0.2s; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Pi Pavoni Shots</h1>
+      <p class="sub">Pressure traces from the La Pavoni, logged by the Pico. Pick a shot.</p>
+    </div>
+    <div class="controls">
+      <label for="shot">Shot
+        <select id="shot"></select>
+      </label>
+      <div class="steps">
+        <button id="prev" type="button" aria-label="Previous shot">&larr;</button>
+        <button id="next" type="button" aria-label="Next shot">&rarr;</button>
+      </div>
+      <label for="compare">Compare with
+        <select id="compare"></select>
+      </label>
+      <button type="button" id="add-shot" hidden>Add shot</button>
+      <input type="file" id="shot-file" accept=".csv,text/csv" hidden>
+    </div>
+  </header>
+
+  <section class="card upload" id="upload" hidden aria-labelledby="upload-title">
+    <div class="card-head">
+      <h2 id="upload-title">Add a shot</h2>
+      <span class="status" id="upload-state" aria-live="polite"></span>
+    </div>
+    <p class="upload-summary" id="upload-summary"></p>
+    <div class="upload-row" id="upload-row">
+      <label for="upload-name">Save as
+        <input type="text" id="upload-name" maxlength="60" spellcheck="false">
+      </label>
+      <button type="button" class="primary" id="upload-save">Add shot</button>
+      <button type="button" id="upload-cancel">Cancel</button>
+    </div>
+  </section>
+
+  <section class="gauges" id="gauges" aria-label="Shot measurements"></section>
+
+  <div class="side-by-side">
+    <section class="card notes">
+      <div class="card-head">
+        <h2 id="notes-title">Setup and taste</h2>
+        <span class="status" id="save-state" aria-live="polite"></span>
+      </div>
+      <form id="notes-form" novalidate>
+        <div class="fields" id="fields"></div>
+        <div class="form-foot">
+          <span class="ratio" id="ratio"></span>
+          <button type="submit" class="primary" id="save">Save notes</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="chart-box">
+    <div class="chart-head">
+      <h2 id="chart-title">Pressure over time</h2>
+      <div class="legend" id="legend"></div>
+    </div>
+    <ul class="legend-shots" id="legend-shots"></ul>
+    <svg id="chart" role="img" aria-label="Pressure over time for the selected shot"></svg>
+    <div class="readout" id="readout" hidden></div>
+    <div class="table-scroll phase-rows">
+      <table>
+        <thead><tr><th>Phase</th><th>From</th><th>Lasted</th><th>&ge; 6 bar</th><th>Avg bar</th><th>Peak bar</th></tr></thead>
+        <tbody id="phase-rows"></tbody>
+      </table>
+      <p class="foot" id="phase-source"></p>
+    </div>
+  </section>
+  </div>
+
+  <section class="card">
+      <h2>All shots</h2>
+      <div class="table-scroll">
+        <table>
+          <thead><tr>
+            <th>Shot</th><th>Peak bar</th><th>&ge; 6 bar</th><th>Avg there</th><th>&ge; 9 bar</th><th>In zone</th><th>Pre-inf.</th><th>Comments</th>
+          </tr></thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+  </section>
+
+  <p class="foot">t = 0 is where pressure first lifts off its resting level. Meaningful extraction: time at or above 6 bar. Areas are pressure &times; time above the resting baseline. Calibration is the rough datasheet line (0 V = 0 bar, 3.3 V = 16 bar) until the side-by-side gauge check.</p>
+</div>
+
+<script id="shot-analysis">
+// ---- ANALYSIS START: a port of analysis/shotlib.py, so uploaded shots get the same numbers ----
+// Keep in step with shotlib.py. A check that the two agree lives in analysis/check_viewer_analysis.py.
+const RULES = { TARGET_BAR: 9, THRESHOLD_BAR: 6, START_BAR: 1.0, SHOT_ON_BAR: 0.1, CONFIRM_BAR: 0.3,
+                CONFIRM_WINDOW: 35, END_S: 3.0, MAX_DRIP_S: 60.0 };
+const PHASE_NAMES = { i: "idle", p: "pre-infusion", e: "extraction", d: "dripping" };
+const PHASE_ORDER = ["pre-infusion", "extraction", "dripping"];
+
+function parseShotCsv(text) {
+  const lines = text.replace(/\r/g, "").split("\n").filter((l) => l.trim() !== "");
+  if (lines.length < 2) throw new Error("The file is empty.");
+  const head = lines[0].split(",").map((s) => s.trim());
+  const col = (n) => head.indexOf(n);
+  if (col("t") < 0 || col("bar") < 0) throw new Error("This doesn't look like a shot log from the Pico: it needs t and bar columns.");
+  const rows = lines.slice(1).map((l) => l.split(","));
+  const t = rows.map((r) => parseFloat(r[col("t")]));
+  const bar = rows.map((r) => parseFloat(r[col("bar")]));
+  const bad = t.findIndex((v, k) => !Number.isFinite(v) || !Number.isFinite(bar[k]));
+  if (bad >= 0) throw new Error(`Row ${bad + 2} has a t or bar value that isn't a number.`);
+  const phase = col("phase") < 0 ? null
+    : rows.map((r) => { const v = (r[col("phase")] || "").trim(); return PHASE_NAMES[v] || v; });
+  return { t, bar, phase };
+}
+
+// The Pico's phase rules replayed over a recording (shotlib.pico_phases): one letter per reading.
+function picoPhases(t, bar) {
+  const R = RULES, out = new Array(t.length).fill("i");
+  let phase = "i", armed = true, cand = null, first = 0, reached = false, lowSince = null, gotExt = false, dripStart = 0;
+  for (let k = 0; k < t.length; k++) {
+    const now = t[k], b = bar[k];
+    if (phase === "i") {
+      if (b <= R.SHOT_ON_BAR) { armed = true; cand = null; }
+      else if (armed) {
+        if (cand === null || k - cand >= R.CONFIRM_WINDOW) cand = k;
+        if (b >= R.CONFIRM_BAR) {
+          first = cand;
+          for (let j = cand; j <= k; j++) out[j] = "p";
+          phase = "p"; reached = false; lowSince = null; gotExt = false;
+        }
+      }
+      continue;
+    }
+    if (phase === "p" && b >= R.START_BAR) { phase = "e"; gotExt = true; }
+    else if (phase === "e") {
+      if (b >= R.THRESHOLD_BAR) reached = true;
+      if (b < (reached ? R.THRESHOLD_BAR : R.START_BAR)) { phase = "d"; dripStart = now; }
+    }
+    out[k] = phase;
+    lowSince = b < R.SHOT_ON_BAR ? (lowSince !== null ? lowSince : now) : null;
+    if ((lowSince !== null && now - lowSince >= R.END_S) || (phase === "d" && now - dripStart >= R.MAX_DRIP_S)) {
+      if (!gotExt) for (let j = first; j <= k; j++) out[j] = "i";
+      phase = "i"; armed = b <= R.SHOT_ON_BAR; cand = null;
+    }
+  }
+  return out;
+}
+
+const mean = (xs) => xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : NaN;
+const round = (x, d) => Math.round(x * 10 ** d) / 10 ** d;
+
+// shotlib.analyse + shotlib.phase_rows, for one parsed log -> the same shape the page embeds
+function analyseShot(parsed) {
+  const R = RULES;
+  const ph = parsed.phase || picoPhases(parsed.t, parsed.bar).map((c) => PHASE_NAMES[c]);
+  const first = ph.findIndex((p) => p !== "idle");
+  if (first < 0) throw new Error("No shot in this file: pressure never rose past 0.3 bar and into extraction.");
+  let last = ph.length - 1;
+  for (let k = first + 1; k < ph.length; k++) if (ph[k] === "idle") { last = k - 1; break; }
+  const before = [];
+  for (let k = 0; k < first; k++) if (ph[k] === "idle") before.push(parsed.bar[k]);
+  const baseline = before.length ? mean(before) : Math.min(...parsed.bar);
+
+  const t0 = parsed.t[first], T = [], B = [], P = [];
+  for (let k = first; k <= last; k++) { T.push(round(parsed.t[k] - t0, 2)); B.push(parsed.bar[k]); P.push(ph[k]); }
+  const n = T.length, end = T[n - 1];
+  const dt = T.map((v, k) => (k ? v - T[k - 1] : NaN));
+  const sumDt = (keep) => dt.reduce((a, d, k) => (k && keep(k) ? a + d : a), 0);
+  const tsWhere = (keep) => T.filter((_, k) => keep(k));
+  const minT = (keep) => { const v = tsWhere(keep); return v.length ? Math.min(...v) : NaN; };
+  const maxT = (keep) => { const v = tsWhere(keep); return v.length ? Math.max(...v) : NaN; };
+
+  const shotStart = minT((k) => B[k] >= R.START_BAR), shotEnd = maxT((k) => B[k] >= R.START_BAR);
+  if (!Number.isFinite(shotStart)) throw new Error("This shot never reached 1 bar, so there's no extraction to analyse.");
+  let peakK = 0;
+  for (let k = 1; k < n; k++) if (B[k] > B[peakK]) peakK = k;
+  const above = (k) => B[k] >= R.THRESHOLD_BAR;
+  const extStart = minT(above), extEnd = maxT(above);
+  const inZone = (k) => T[k] >= extStart && T[k] <= extEnd;
+  const extractionStart = minT((k) => P[k] === "extraction");
+  const dripStart = minT((k) => P[k] === "dripping");
+  const hasDrip = Number.isFinite(dripStart);
+  const excess = B.map((b) => Math.max(b - baseline, 0));
+  const area = (a, b) => {
+    let s = 0, prev = -1;
+    for (let k = 0; k < n; k++) {
+      if (T[k] < a || T[k] > b) continue;
+      if (prev >= 0) s += (T[k] - T[prev]) * (excess[k] + excess[prev]) / 2;
+      prev = k;
+    }
+    return s;
+  };
+  const zoneBars = B.filter((_, k) => inZone(k));
+  const metrics = {
+    baseline_bar: baseline,
+    preinfusion_s: extractionStart,
+    preinfusion_bar: mean(B.filter((_, k) => P[k] === "pre-infusion")),
+    extraction_s: (hasDrip ? dripStart : end) - extractionStart,
+    dripping_s: hasDrip ? end - dripStart : 0,
+    timer_s: hasDrip ? dripStart : end,
+    shot_duration_s: shotEnd - shotStart,
+    peak_bar: B[peakK],
+    peak_t: T[peakK],
+    meaningful_s: sumDt(above),
+    at_target_s: sumDt((k) => B[k] >= R.TARGET_BAR),
+    zone_mean_bar: mean(zoneBars),
+    extraction_start: extStart,
+    extraction_end: extEnd,
+    area_before: area(T[0], extStart),
+    area_extraction: area(extStart, extEnd),
+    area_after: area(extEnd, end),
+    area_total: area(T[0], end),
+  };
+  const phases = [];
+  for (const p of PHASE_ORDER) {
+    const ks = [];
+    for (let k = 0; k < n; k++) if (P[k] === p) ks.push(k);
+    if (!ks.length) continue;
+    const from = Math.min(...ks.map((k) => T[k])), to = Math.max(...ks.map((k) => T[k]));
+    const later = T.filter((v) => v > to);
+    const until = later.length ? Math.min(...later) : to;
+    phases.push({
+      phase: p,
+      from_s: round(from, 1),
+      duration_s: round(until - from, 1),
+      avg_bar: round(mean(ks.map((k) => B[k])), 2),
+      peak_bar: round(Math.max(...ks.map((k) => B[k])), 2),
+      meaningful_s: round(ks.reduce((a, k) => (k && B[k] >= R.THRESHOLD_BAR ? a + dt[k] : a), 0), 3),
+    });
+  }
+  return { t: T, bar: B.map((b) => round(b, 2)), phase: P, phases, metrics };
+}
+// ---- ANALYSIS END ----
+</script>
+
+<script>
+const DATA = {"target": 9, "threshold": 6, "start": 1.0, "shots": [{"name": "first_shot_2026-09-06", "t": [0.0, 0.54, 1.09, 1.63, 2.17, 2.72, 3.3, 3.85, 4.39, 4.94, 5.48, 6.03, 6.57, 7.12, 7.66, 8.21, 8.75, 9.3, 9.84, 10.39, 10.94, 11.48, 12.06, 12.61, 13.16, 13.7, 14.25, 14.8, 15.34, 15.89, 16.44, 16.98, 17.53, 18.08, 18.62, 19.17, 19.72, 20.27, 20.85, 21.4, 21.95, 22.5, 23.04, 23.59, 24.14, 24.69, 25.24, 25.78, 26.33, 26.88, 27.43, 27.98, 28.53, 29.08, 29.67, 30.22, 30.76, 31.31, 31.86, 32.41, 32.96, 33.51, 34.06, 34.61, 35.16, 35.71, 36.26, 36.81, 37.36, 37.92, 38.5, 39.05, 39.61, 40.16, 40.71, 41.26, 41.81, 42.36, 42.91, 43.46, 44.02, 44.57, 45.12, 45.67, 46.22, 46.77, 47.36, 47.91, 48.47, 49.02, 49.57, 50.13, 50.68, 51.26, 51.8, 52.34, 52.87, 53.41, 53.95, 54.48, 55.02, 55.56, 56.13, 56.67, 57.21, 57.75, 58.28, 58.82, 59.36, 59.9, 60.44, 60.97, 61.51, 62.05, 62.59, 63.13, 63.67, 64.2, 64.78, 65.32, 65.86, 66.4, 66.94, 67.48, 68.02], "bar": [0.12, 0.2, 0.44, 0.56, 0.64, 0.65, 0.65, 0.65, 0.66, 0.99, 1.93, 3.87, 5.81, 6.33, 6.77, 7.0, 7.41, 6.83, 5.2, 4.4, 3.6, 3.17, 2.73, 2.42, 2.21, 1.96, 1.81, 1.7, 1.6, 1.46, 1.38, 1.33, 1.26, 1.18, 1.13, 1.1, 1.06, 1.01, 0.97, 0.93, 0.92, 0.89, 0.85, 0.83, 0.8, 0.78, 0.75, 0.75, 0.7, 0.7, 0.68, 0.65, 0.63, 0.61, 0.61, 0.58, 0.57, 0.55, 0.55, 0.52, 0.53, 0.52, 0.51, 0.51, 0.5, 0.47, 0.47, 0.46, 0.44, 0.44, 0.44, 0.43, 0.43, 0.41, 0.41, 0.4, 0.41, 0.4, 0.39, 0.38, 0.37, 0.36, 0.36, 0.36, 0.35, 0.35, 0.33, 0.35, 0.33, 0.33, 0.32, 0.32, 0.3, 0.3, 0.3, 0.3, 0.29, 0.29, 0.29, 0.3, 0.29, 0.28, 0.27, 0.27, 0.26, 0.26, 0.26, 0.21, 0.24, 0.25, 0.25, 0.23, 0.23, 0.23, 0.22, 0.22, 0.23, 0.21, 0.21, 0.21, 0.21, 0.2, 0.19, 0.17, 0.19], "phase": ["pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping"], "phases": [{"phase": "pre-infusion", "from_s": 0.0, "duration_s": 5.5, "avg_bar": 0.56, "peak_bar": 0.99, "meaningful_s": 0.0}, {"phase": "extraction", "from_s": 5.5, "duration_s": 4.4, "avg_bar": 5.74, "peak_bar": 7.41, "meaningful_s": 2.73}, {"phase": "dripping", "from_s": 9.8, "duration_s": 58.2, "avg_bar": 0.74, "peak_bar": 5.2, "meaningful_s": 0.0}], "metrics": {"phases_logged": 1.0, "baseline_bar": 0.068, "sample_interval_s": 0.55, "preinfusion_s": 5.48, "preinfusion_bar": 0.556, "extraction_s": 4.36, "dripping_s": 58.18, "timer_s": 9.84, "ramp_s": 1.64, "zone_mean_bar": 6.868, "fall_s": 10.97, "shot_duration_s": 14.79, "peak_bar": 7.41, "peak_t": 8.75, "meaningful_s": 2.73, "at_target_s": 0.0, "extraction_start": 7.12, "extraction_end": 9.3, "area_before": 10.608, "area_extraction": 14.983, "area_after": 41.132, "area_total": 66.723}, "notes": {"date": "2026-09-06", "beans": "", "roast": "", "freshness": "", "grind_setting": "", "dose_g": "", "yield_g": "", "basket": "", "comments": "sour (underextracted). first captured shot; transducer joint leaking slightly (no PTFE tape)"}}, {"name": "shot_010", "t": [0.0, 0.18, 0.4, 0.58, 0.76, 0.95, 1.13, 1.31, 1.5, 1.68, 1.86, 2.04, 2.22, 2.4, 2.58, 2.81, 2.99, 3.17, 3.35, 3.53, 3.72, 3.9, 4.08, 4.26, 4.44, 4.62, 4.81, 4.99, 5.22, 5.4, 5.58, 5.77, 5.95, 6.13, 6.31, 6.5, 6.68, 6.86, 7.04, 7.23, 7.41, 7.64, 7.82, 8.0, 8.19, 8.37, 8.61, 8.83, 9.05, 9.27, 9.49, 9.71, 9.94, 10.16, 10.42, 10.64, 10.86, 11.08, 11.3, 11.52, 11.75, 11.97, 12.19, 12.41, 12.64, 12.86, 13.08, 13.34, 13.57, 13.79, 14.01, 14.23, 14.45, 14.68, 14.9, 15.13, 15.35, 15.57, 15.79, 16.05, 16.3, 16.51, 16.72, 16.92, 17.13, 17.34, 17.55, 17.76, 17.97, 18.18, 18.39, 18.6, 18.8, 19.06, 19.27, 19.47, 19.68, 19.89, 20.11, 20.31, 20.52, 20.73, 20.94, 21.15, 21.36, 21.57, 21.82, 22.03, 22.24, 22.45, 22.66, 22.88, 23.08, 23.3, 23.51, 23.72, 23.93, 24.14, 24.34, 24.6, 24.81, 25.02, 25.23, 25.44, 25.66, 25.87, 26.08, 26.29, 26.5, 26.71, 26.93, 27.14, 27.39, 27.6, 27.82, 28.03, 28.24, 28.46, 28.67, 28.88, 29.09, 29.3, 29.52, 29.73, 29.94, 30.2, 30.41, 30.62, 30.83, 31.06, 31.27, 31.48, 31.7, 31.91, 32.12, 32.33, 32.55, 32.76, 33.02, 33.23, 33.45, 33.66, 33.88, 34.1, 34.31, 34.53, 34.74, 34.96, 35.17, 35.39, 35.6, 35.86, 36.07, 36.29, 36.5, 36.73, 36.94, 37.16, 37.38, 37.59, 37.81, 38.02, 38.24, 38.46, 38.72, 38.93, 39.15, 39.37, 39.59, 39.81, 40.03, 40.25, 40.46, 40.68, 40.89, 41.11, 41.33, 41.59, 41.81, 42.02, 42.25, 42.47, 42.68, 42.9, 43.12, 43.34, 43.56, 43.78, 44.0, 44.22, 44.48, 44.7, 44.92, 45.14, 45.36, 45.58, 45.8, 46.02, 46.24, 46.46, 46.68, 46.9, 47.13, 47.39, 47.61, 47.83, 48.06, 48.28, 48.5, 48.72, 48.94, 49.16, 49.39, 49.61, 49.83, 50.05, 50.32, 50.54, 50.76, 50.99, 51.21, 51.44, 51.66, 51.88, 52.1, 52.33, 52.55, 52.77, 52.99, 53.26, 53.48, 53.74, 53.95, 54.16, 54.37, 54.58, 54.78, 54.99, 55.2, 55.41, 55.61, 55.82, 56.07, 56.28, 56.5, 56.7, 56.91, 57.12, 57.33, 57.54, 57.75, 57.95, 58.17, 58.37, 58.58, 58.84, 59.05, 59.26, 59.47, 59.68, 59.89, 60.1, 60.31, 60.52, 60.73, 60.94, 61.15, 61.36, 61.62, 61.83, 62.05, 62.26, 62.47, 62.68, 62.89, 63.1, 63.31, 63.52, 63.73, 63.95, 64.16, 64.41, 64.62, 64.84, 65.05, 65.27, 65.48, 65.69, 65.9, 66.12, 66.33, 66.54, 66.75, 66.96, 67.22, 67.44, 67.65, 67.87, 68.08, 68.3, 68.51, 68.72, 68.93, 69.15, 69.36, 69.57, 69.78, 70.04, 70.26, 70.47, 70.69, 70.9, 71.11, 71.33, 71.54, 71.75, 71.97, 72.18, 72.39, 72.61, 72.87, 73.09, 73.3, 73.52, 73.73, 73.95, 74.16, 74.38, 74.59, 74.81, 75.02, 75.24, 75.45, 75.71, 75.94, 76.16, 76.37, 76.59, 76.81, 77.02, 77.24, 77.45, 77.67, 77.89, 78.1, 78.32, 78.59, 78.8, 79.02, 79.24, 79.46, 79.67, 79.89, 80.11, 80.33, 80.54, 80.76, 80.98, 81.2, 81.47, 81.69, 81.9, 82.12, 82.34, 82.56, 82.78, 83.0, 83.22, 83.44, 83.66, 83.88, 84.1, 84.37, 84.59, 84.81, 85.03, 85.25, 85.47, 85.69, 85.91, 86.13, 86.35, 86.57, 86.79, 87.01, 87.28, 87.5, 87.73, 87.95, 88.17, 88.39, 88.61, 88.83, 89.05, 89.27, 89.5, 89.72, 89.94, 90.21, 90.43, 90.66, 90.88, 91.1, 91.32, 91.55, 91.77, 91.99, 92.21, 92.44, 92.7, 92.91, 93.16, 93.37, 93.58, 93.79, 93.99, 94.2, 94.41, 94.62, 94.83, 95.03, 95.24, 95.45, 95.66, 95.91, 96.12, 96.33, 96.54, 96.75, 96.95, 97.16, 97.37], "bar": [0.11, 0.17, 0.26, 0.33, 0.38, 0.45, 0.49, 0.55, 0.61, 0.65, 0.7, 0.72, 0.73, 0.75, 0.75, 0.75, 0.77, 0.75, 0.76, 0.76, 0.77, 0.77, 0.77, 0.77, 0.77, 0.79, 0.78, 0.78, 0.79, 0.78, 0.77, 0.78, 0.78, 0.78, 0.78, 0.78, 0.78, 0.77, 0.78, 0.78, 0.76, 0.76, 0.77, 0.77, 0.79, 1.25, 2.05, 2.84, 3.71, 4.54, 5.4, 5.95, 6.46, 6.84, 7.16, 7.15, 7.49, 7.57, 7.71, 7.73, 7.77, 7.81, 7.9, 7.89, 7.9, 7.78, 7.71, 7.63, 7.82, 7.86, 7.75, 7.73, 7.69, 7.72, 7.68, 7.64, 7.67, 7.77, 7.95, 8.22, 8.41, 8.44, 8.38, 8.46, 8.2, 8.36, 8.36, 8.34, 8.04, 7.84, 7.81, 7.95, 8.15, 8.1, 8.24, 8.14, 8.2, 8.11, 8.14, 8.19, 8.32, 8.25, 8.28, 8.22, 8.25, 8.2, 8.2, 8.18, 8.33, 8.27, 8.19, 8.37, 8.26, 8.47, 8.61, 8.63, 8.55, 8.57, 8.45, 8.42, 8.46, 8.34, 8.36, 8.39, 8.33, 8.25, 8.16, 8.53, 8.43, 8.46, 8.52, 8.33, 8.5, 8.45, 8.43, 8.26, 8.25, 8.27, 8.37, 8.28, 8.36, 8.45, 8.57, 8.57, 8.4, 8.46, 8.57, 8.65, 8.61, 8.73, 8.52, 8.38, 8.58, 8.59, 8.56, 8.54, 8.59, 8.68, 8.59, 8.58, 8.72, 8.76, 8.51, 8.8, 8.8, 8.77, 9.12, 9.16, 9.13, 9.13, 8.71, 8.06, 7.6, 7.18, 6.8, 6.45, 6.15, 5.86, 5.62, 5.35, 5.0, 4.68, 4.36, 4.15, 3.99, 3.86, 3.73, 3.63, 3.49, 3.42, 3.32, 3.22, 3.13, 3.06, 2.99, 2.88, 2.77, 2.64, 2.54, 2.44, 2.35, 2.29, 2.24, 2.2, 2.16, 2.12, 2.08, 2.04, 2.01, 1.96, 1.92, 1.89, 1.85, 1.82, 1.79, 1.77, 1.73, 1.71, 1.68, 1.65, 1.62, 1.61, 1.57, 1.54, 1.5, 1.47, 1.43, 1.41, 1.39, 1.35, 1.34, 1.33, 1.3, 1.28, 1.28, 1.26, 1.24, 1.22, 1.21, 1.2, 1.18, 1.16, 1.15, 1.14, 1.12, 1.11, 1.11, 1.09, 1.08, 1.07, 1.05, 1.04, 1.03, 1.03, 1.01, 1.0, 1.0, 0.99, 0.98, 0.98, 0.97, 0.96, 0.95, 0.93, 0.93, 0.93, 0.92, 0.92, 0.91, 0.89, 0.89, 0.88, 0.88, 0.87, 0.86, 0.85, 0.84, 0.84, 0.83, 0.81, 0.81, 0.81, 0.79, 0.8, 0.77, 0.77, 0.76, 0.76, 0.75, 0.75, 0.73, 0.73, 0.72, 0.71, 0.71, 0.7, 0.69, 0.69, 0.69, 0.67, 0.66, 0.66, 0.65, 0.65, 0.64, 0.64, 0.63, 0.63, 0.61, 0.62, 0.6, 0.6, 0.59, 0.6, 0.58, 0.57, 0.58, 0.57, 0.56, 0.56, 0.55, 0.55, 0.54, 0.54, 0.53, 0.53, 0.52, 0.52, 0.52, 0.5, 0.5, 0.5, 0.49, 0.49, 0.5, 0.48, 0.49, 0.48, 0.47, 0.47, 0.46, 0.46, 0.46, 0.45, 0.45, 0.45, 0.45, 0.44, 0.43, 0.43, 0.42, 0.43, 0.43, 0.42, 0.41, 0.4, 0.41, 0.4, 0.4, 0.4, 0.39, 0.39, 0.39, 0.38, 0.38, 0.38, 0.37, 0.38, 0.36, 0.37, 0.37, 0.36, 0.36, 0.35, 0.36, 0.35, 0.35, 0.34, 0.35, 0.34, 0.34, 0.34, 0.34, 0.33, 0.33, 0.33, 0.33, 0.33, 0.32, 0.32, 0.32, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.3, 0.31, 0.3, 0.32, 0.29, 0.3, 0.29, 0.3, 0.29, 0.29, 0.3, 0.29, 0.29, 0.28, 0.29, 0.28, 0.27, 0.28, 0.28, 0.27, 0.27, 0.27, 0.27, 0.26, 0.27, 0.27, 0.26, 0.27, 0.25, 0.25, 0.26, 0.25, 0.24, 0.25, 0.25, 0.24, 0.25, 0.24, 0.26, 0.24, 0.24, 0.24, 0.24, 0.24, 0.23, 0.24, 0.23, 0.23, 0.23, 0.22, 0.22, 0.24, 0.23, 0.22], "phase": ["pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping"], "phases": [{"phase": "pre-infusion", "from_s": 0.0, "duration_s": 8.4, "avg_bar": 0.69, "peak_bar": 0.79, "meaningful_s": 0.0}, {"phase": "extraction", "from_s": 8.4, "duration_s": 28.8, "avg_bar": 7.95, "peak_bar": 9.16, "meaningful_s": 27.23}, {"phase": "dripping", "from_s": 37.2, "duration_s": 60.2, "avg_bar": 0.96, "peak_bar": 5.86, "meaningful_s": 0.0}], "metrics": {"phases_logged": 1.0, "baseline_bar": 0.063, "sample_interval_s": 0.22, "preinfusion_s": 8.37, "preinfusion_bar": 0.685, "extraction_s": 28.79, "dripping_s": 60.21, "timer_s": 37.16, "ramp_s": 1.57, "zone_mean_bar": 8.185, "fall_s": 17.84, "shot_duration_s": 46.41, "peak_bar": 9.16, "peak_t": 34.96, "meaningful_s": 27.23, "at_target_s": 0.86, "extraction_start": 9.94, "extraction_end": 36.94, "area_before": 11.542, "area_extraction": 219.546, "area_after": 55.3, "area_total": 286.388}, "notes": {"date": "2026-10-24", "beans": "Lidl (£3)", "roast": "very dark", "freshness": "fresh", "grind_setting": "3", "dose_g": "9", "yield_g": "", "basket": "small", "comments": "very nice: balanced, no sourness, no bitterness. flavour notes hard to pick out, put down to the beans rather than the extraction"}}, {"name": "shot_011", "t": [0.0, 0.18, 0.36, 0.54, 0.71, 0.94, 1.12, 1.3, 1.48, 1.66, 1.84, 2.02, 2.2, 2.38, 2.56, 2.74, 2.92, 3.1, 3.33, 3.51, 3.69, 3.87, 4.05, 4.23, 4.41, 4.59, 4.77, 4.95, 5.13, 5.31, 5.49, 5.72, 5.91, 6.09, 6.27, 6.45, 6.63, 6.82, 7.0, 7.18, 7.36, 7.54, 7.73, 7.91, 8.14, 8.32, 8.5, 8.68, 8.92, 9.14, 9.36, 9.58, 9.8, 10.02, 10.24, 10.46, 10.68, 10.95, 11.17, 11.39, 11.61, 11.83, 12.05, 12.27, 12.5, 12.72, 12.94, 13.16, 13.38, 13.6, 13.87, 14.09, 14.31, 14.53, 14.75, 14.97, 15.19, 15.42, 15.64, 15.87, 16.09, 16.31, 16.53, 16.8, 17.03, 17.25, 17.47, 17.69, 17.92, 18.14, 18.37, 18.59, 18.85, 19.06, 19.26, 19.47, 19.72, 19.93, 20.14, 20.34, 20.55, 20.76, 20.98, 21.18, 21.39, 21.6, 21.81, 22.02, 22.23, 22.48, 22.69, 22.9, 23.11, 23.32, 23.53, 23.74, 23.95, 24.16, 24.37, 24.58, 24.79, 25.0, 25.25, 25.46, 25.67, 25.88, 26.09, 26.3, 26.51, 26.72, 26.94, 27.14, 27.35, 27.57, 27.77, 28.03, 28.24, 28.45, 28.66, 28.87, 29.08, 29.3, 29.51, 29.73, 29.94, 30.15, 30.36, 30.57, 30.83, 31.05, 31.26, 31.47, 31.68, 31.9, 32.11, 32.33, 32.54, 32.75, 32.96, 33.17, 33.39, 33.65, 33.86, 34.08, 34.29, 34.5, 34.72, 34.93, 35.15, 35.36, 35.58, 35.79, 36.0, 36.22, 36.48, 36.69, 36.91, 37.12, 37.34, 37.56, 37.77, 37.99, 38.2, 38.42, 38.63, 38.85, 39.06, 39.33, 39.55, 39.76, 39.98, 40.19, 40.42, 40.63, 40.85, 41.06, 41.28, 41.5, 41.71, 41.93, 42.19, 42.41, 42.63, 42.84, 43.07, 43.28, 43.5, 43.72, 43.94, 44.16, 44.37, 44.59, 44.81, 45.07, 45.29, 45.51, 45.72, 45.95, 46.17, 46.38, 46.6, 46.82, 47.04, 47.25, 47.47, 47.69, 47.96, 48.17, 48.39, 48.61, 48.84, 49.06, 49.28, 49.5, 49.71, 49.93, 50.15, 50.37, 50.59, 50.86, 51.08, 51.3, 51.52, 51.74, 51.97, 52.18, 52.4, 52.63, 52.85, 53.07, 53.29, 53.51, 53.78, 54.0, 54.22, 54.44, 54.66, 54.89, 55.11, 55.33, 55.55, 55.77, 55.99, 56.22, 56.44, 56.71, 56.93, 57.15, 57.38, 57.6, 57.82, 58.04, 58.3, 58.51, 58.72, 58.92, 59.13, 59.33, 59.59, 59.8, 60.0, 60.22, 60.42, 60.63, 60.84, 61.05, 61.26, 61.46, 61.67, 61.88, 62.09, 62.34, 62.55, 62.76, 62.97, 63.18, 63.4, 63.6, 63.81, 64.02, 64.23, 64.44, 64.65, 64.86, 65.11, 65.32, 65.53, 65.75, 65.96, 66.17, 66.38, 66.59, 66.8, 67.01, 67.23, 67.44, 67.65, 67.91, 68.12, 68.34, 68.55, 68.76, 68.97, 69.18, 69.39, 69.61, 69.82, 70.03, 70.24, 70.45, 70.72, 70.93, 71.15, 71.36, 71.58, 71.79, 72.0, 72.21, 72.43, 72.64, 72.85, 73.07, 73.28, 73.54, 73.75, 73.97, 74.19, 74.4, 74.61, 74.83, 75.04, 75.25, 75.47, 75.68, 75.9, 76.11, 76.37, 76.59, 76.81, 77.02, 77.24, 77.45, 77.67, 77.88, 78.1, 78.31, 78.53, 78.74, 78.96, 79.22, 79.44, 79.66, 79.88, 80.09, 80.31, 80.53, 80.74, 80.96, 81.18, 81.39, 81.61, 81.83, 82.09, 82.32, 82.53, 82.75, 82.97, 83.18, 83.4, 83.62, 83.83, 84.05, 84.27, 84.49, 84.71, 84.97, 85.19, 85.41, 85.63, 85.85, 86.07, 86.29, 86.5, 86.72, 86.94, 87.16, 87.37, 87.59, 87.86, 88.09, 88.31, 88.53, 88.75, 88.97, 89.18, 89.41, 89.63, 89.84, 90.06, 90.28, 90.5, 90.77, 90.99, 91.21, 91.43, 91.65, 91.87, 92.09, 92.31, 92.53, 92.75, 92.97, 93.19, 93.41, 93.69, 93.91, 94.13, 94.35, 94.57], "bar": [0.13, 0.18, 0.25, 0.3, 0.32, 0.37, 0.41, 0.45, 0.49, 0.53, 0.58, 0.6, 0.64, 0.68, 0.69, 0.71, 0.72, 0.72, 0.72, 0.73, 0.72, 0.71, 0.72, 0.72, 0.72, 0.71, 0.72, 0.71, 0.7, 0.71, 0.71, 0.7, 0.7, 0.7, 0.69, 0.7, 0.69, 0.69, 0.69, 0.69, 0.69, 0.69, 0.68, 0.69, 0.68, 0.68, 0.69, 1.07, 1.93, 2.54, 3.81, 5.21, 6.18, 7.26, 8.05, 8.22, 8.53, 8.99, 9.25, 9.18, 9.13, 9.22, 9.21, 9.17, 9.21, 9.24, 9.34, 9.33, 9.35, 9.29, 9.43, 9.39, 9.37, 9.49, 9.38, 9.38, 9.22, 9.34, 9.34, 9.32, 9.38, 9.12, 9.1, 9.0, 9.0, 8.8, 8.8, 8.89, 8.79, 8.79, 8.71, 8.7, 8.52, 8.64, 8.71, 8.85, 8.83, 9.08, 9.19, 9.06, 8.86, 8.81, 8.75, 8.79, 8.93, 8.79, 8.93, 9.02, 8.91, 8.87, 8.95, 8.75, 8.85, 8.79, 8.85, 8.72, 8.76, 8.64, 8.85, 8.75, 8.75, 8.78, 8.73, 8.76, 8.72, 8.71, 8.58, 8.67, 8.88, 8.9, 8.93, 9.16, 9.33, 9.36, 9.35, 9.27, 9.34, 9.3, 9.29, 9.26, 9.19, 9.09, 9.02, 9.0, 8.97, 8.89, 8.93, 8.96, 8.97, 9.31, 9.12, 9.21, 9.24, 9.3, 9.22, 9.24, 9.21, 9.16, 9.21, 9.27, 9.18, 9.27, 9.29, 9.43, 9.27, 9.23, 9.12, 9.11, 9.11, 9.05, 9.1, 8.95, 9.21, 9.05, 9.09, 9.2, 9.19, 9.2, 9.19, 9.26, 9.28, 9.19, 9.12, 9.49, 9.24, 9.65, 9.27, 9.39, 9.35, 9.29, 9.13, 9.24, 9.17, 9.34, 9.17, 9.17, 8.99, 8.91, 8.84, 8.86, 8.84, 8.7, 8.46, 7.91, 7.45, 7.05, 6.68, 6.32, 5.99, 5.72, 5.46, 5.24, 5.06, 4.84, 4.66, 4.5, 4.35, 4.18, 3.9, 3.82, 3.81, 3.72, 3.63, 3.52, 3.43, 3.35, 3.24, 3.17, 3.11, 3.02, 2.96, 2.89, 2.83, 2.77, 2.71, 2.65, 2.59, 2.55, 2.5, 2.46, 2.4, 2.37, 2.32, 2.28, 2.24, 2.21, 2.17, 2.14, 2.1, 2.07, 2.04, 2.01, 1.98, 1.95, 1.92, 1.89, 1.87, 1.84, 1.81, 1.79, 1.77, 1.75, 1.73, 1.68, 1.68, 1.65, 1.63, 1.61, 1.59, 1.58, 1.56, 1.54, 1.52, 1.52, 1.49, 1.48, 1.46, 1.43, 1.43, 1.42, 1.4, 1.39, 1.37, 1.35, 1.35, 1.34, 1.32, 1.31, 1.3, 1.29, 1.28, 1.26, 1.26, 1.24, 1.23, 1.22, 1.21, 1.2, 1.21, 1.19, 1.17, 1.18, 1.15, 1.15, 1.13, 1.12, 1.12, 1.1, 1.09, 1.09, 1.08, 1.07, 1.07, 1.05, 1.04, 1.04, 1.03, 1.02, 1.02, 1.0, 1.01, 0.99, 0.99, 0.98, 0.97, 0.98, 0.96, 0.96, 0.95, 0.95, 0.93, 0.92, 0.92, 0.91, 0.91, 0.9, 0.89, 0.91, 0.89, 0.87, 0.87, 0.87, 0.86, 0.84, 0.84, 0.84, 0.83, 0.82, 0.82, 0.82, 0.81, 0.81, 0.79, 0.79, 0.79, 0.79, 0.77, 0.77, 0.77, 0.76, 0.76, 0.75, 0.75, 0.74, 0.74, 0.73, 0.73, 0.74, 0.72, 0.72, 0.71, 0.7, 0.7, 0.7, 0.69, 0.69, 0.68, 0.68, 0.68, 0.67, 0.67, 0.66, 0.67, 0.66, 0.65, 0.65, 0.65, 0.64, 0.64, 0.64, 0.64, 0.63, 0.62, 0.63, 0.62, 0.62, 0.61, 0.61, 0.61, 0.6, 0.6, 0.6, 0.6, 0.59, 0.59, 0.58, 0.57, 0.53, 0.48, 0.48, 0.49, 0.49, 0.5, 0.52, 0.58, 0.56, 0.55, 0.57, 0.55, 0.54, 0.55, 0.54, 0.54, 0.54, 0.53, 0.53, 0.53, 0.53, 0.52, 0.52, 0.51, 0.5, 0.51, 0.5, 0.5, 0.5, 0.5, 0.49, 0.49], "phase": ["pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping"], "phases": [{"phase": "pre-infusion", "from_s": 0.0, "duration_s": 8.7, "avg_bar": 0.62, "peak_bar": 0.73, "meaningful_s": 0.0}, {"phase": "extraction", "from_s": 8.7, "duration_s": 35.3, "avg_bar": 8.77, "peak_bar": 9.65, "meaningful_s": 34.14}, {"phase": "dripping", "from_s": 43.9, "duration_s": 50.6, "avg_bar": 1.39, "peak_bar": 5.99, "meaningful_s": 0.0}], "metrics": {"phases_logged": 1.0, "baseline_bar": 0.061, "sample_interval_s": 0.22, "preinfusion_s": 8.68, "preinfusion_bar": 0.62, "extraction_s": 35.26, "dripping_s": 50.63, "timer_s": 43.94, "ramp_s": 1.12, "zone_mean_bar": 8.961, "fall_s": 24.83, "shot_duration_s": 59.87, "peak_bar": 9.65, "peak_t": 38.85, "meaningful_s": 34.14, "at_target_s": 19.72, "extraction_start": 9.8, "extraction_end": 43.72, "area_before": 8.663, "area_extraction": 302.493, "area_after": 68.572, "area_total": 379.728}, "notes": {"date": "2026-10-25", "beans": "Lidl", "roast": "very dark", "freshness": "fresh", "grind_setting": "2", "dose_g": "9", "yield_g": "35", "basket": "small", "comments": "Best shot so far. No taste notes identified"}}, {"name": "shot_012", "t": [0.0, 0.18, 0.36, 0.54, 0.72, 0.9, 1.08, 1.26, 1.44, 1.62, 1.8, 2.03, 2.21, 2.39, 2.57, 2.75, 2.93, 3.11, 3.29, 3.47, 3.65, 3.84, 4.02, 4.2, 4.44, 4.62, 4.8, 4.98, 5.16, 5.35, 5.53, 5.71, 5.89, 6.07, 6.26, 6.44, 6.62, 6.85, 7.04, 7.22, 7.4, 7.58, 7.77, 7.95, 8.13, 8.32, 8.51, 8.69, 8.87, 9.06, 9.29, 9.48, 9.66, 9.89, 10.12, 10.34, 10.56, 10.78, 11.0, 11.22, 11.44, 11.66, 11.89, 12.16, 12.38, 12.6, 12.82, 13.04, 13.26, 13.48, 13.71, 13.93, 14.15, 14.37, 14.6, 14.82, 15.1, 15.32, 15.54, 15.76, 15.99, 16.21, 16.43, 16.65, 16.87, 17.13, 17.34, 17.55, 17.76, 18.02, 18.23, 18.43, 18.64, 18.84, 19.05, 19.26, 19.47, 19.67, 19.88, 20.09, 20.3, 20.51, 20.77, 20.98, 21.18, 21.39, 21.6, 21.81, 22.02, 22.23, 22.43, 22.64, 22.85, 23.07, 23.28, 23.54, 23.75, 23.96, 24.17, 24.38, 24.58, 24.79, 25.0, 25.21, 25.42, 25.64, 25.85, 26.06, 26.32, 26.53, 26.74, 26.95, 27.16, 27.37, 27.58, 27.8, 28.01, 28.22, 28.44, 28.65, 28.86, 29.13, 29.34, 29.55, 29.76, 29.98, 30.19, 30.4, 30.61, 30.83, 31.04, 31.26, 31.47, 31.68, 31.95, 32.16, 32.37, 32.59, 32.8, 33.01, 33.22, 33.44, 33.65, 33.86, 34.08, 34.3, 34.51, 34.78, 34.99, 35.2, 35.42, 35.63, 35.84, 36.06, 36.27, 36.49, 36.71, 36.92, 37.14, 37.35, 37.62, 37.84, 38.05, 38.27, 38.48, 38.7, 38.92, 39.13, 39.35, 39.57, 39.79, 40.0, 40.22, 40.49, 40.7, 40.92, 41.14, 41.35, 41.57, 41.79, 42.01, 42.22, 42.45, 42.67, 42.88, 43.1, 43.37, 43.59, 43.81, 44.02, 44.24, 44.46, 44.68, 44.9, 45.12, 45.35, 45.57, 45.78, 46.0, 46.27, 46.49, 46.71, 46.93, 47.15, 47.37, 47.59, 47.81, 48.03, 48.25, 48.47, 48.7, 48.91, 49.19, 49.41, 49.63, 49.85, 50.07, 50.29, 50.51, 50.73, 50.96, 51.18, 51.4, 51.62, 51.85, 52.12, 52.34, 52.56, 52.78, 53.0, 53.23, 53.45, 53.67, 53.9, 54.12, 54.34, 54.57, 54.79, 55.06, 55.28, 55.51, 55.73, 55.95, 56.18, 56.43, 56.64, 56.85, 57.06, 57.27, 57.48, 57.68, 57.94, 58.15, 58.35, 58.56, 58.77, 58.98, 59.19, 59.4, 59.61, 59.82, 60.03, 60.24, 60.45, 60.71, 60.91, 61.12, 61.33, 61.54, 61.75, 61.96, 62.17, 62.38, 62.59, 62.8, 63.01, 63.22, 63.47, 63.68, 63.89, 64.1, 64.31, 64.52, 64.73, 64.94, 65.16, 65.37, 65.58, 65.79, 66.0, 66.26, 66.47, 66.68, 66.89, 67.1, 67.31, 67.52, 67.74, 67.95, 68.16, 68.37, 68.59, 68.8, 69.06, 69.27, 69.48, 69.69, 69.91, 70.12, 70.33, 70.55, 70.76, 70.97, 71.19, 71.4, 71.61, 71.88, 72.09, 72.3, 72.52, 72.73, 72.94, 73.16, 73.37, 73.59, 73.8, 74.02, 74.23, 74.45, 74.71, 74.93, 75.14, 75.35, 75.57, 75.78, 76.01, 76.22, 76.44, 76.65, 76.86, 77.08, 77.29, 77.56, 77.78, 78.0, 78.21, 78.43, 78.64, 78.87, 79.08, 79.3, 79.52, 79.73, 79.95, 80.16, 80.43], "bar": [0.12, 0.14, 0.22, 0.26, 0.31, 0.34, 0.37, 0.41, 0.45, 0.48, 0.51, 0.56, 0.59, 0.61, 0.63, 0.65, 0.66, 0.67, 0.68, 0.69, 0.69, 0.69, 0.69, 0.68, 0.69, 0.69, 0.69, 0.69, 0.68, 0.69, 0.68, 0.68, 0.7, 0.68, 0.69, 0.68, 0.68, 0.68, 0.68, 0.68, 0.68, 0.68, 0.68, 0.68, 0.68, 0.67, 0.67, 0.68, 0.67, 0.68, 0.78, 0.81, 1.49, 2.49, 4.94, 6.49, 8.45, 10.22, 10.46, 10.12, 9.31, 8.49, 8.05, 7.79, 7.63, 7.53, 7.8, 7.81, 7.71, 7.87, 7.91, 8.17, 8.76, 8.69, 8.68, 8.6, 8.58, 8.54, 8.48, 8.52, 8.54, 8.48, 8.42, 8.36, 8.34, 8.21, 8.27, 8.2, 8.04, 7.6, 7.68, 7.61, 7.75, 7.71, 7.63, 7.56, 7.48, 7.48, 7.47, 7.42, 7.39, 7.2, 7.21, 7.09, 7.04, 6.93, 6.8, 6.73, 6.71, 6.9, 7.59, 8.33, 8.53, 8.59, 8.44, 8.48, 8.43, 8.57, 8.59, 8.54, 8.48, 8.43, 8.42, 8.37, 8.51, 8.56, 8.49, 8.41, 8.26, 8.3, 8.54, 8.4, 8.4, 8.52, 8.48, 8.46, 8.34, 8.34, 8.3, 8.39, 8.4, 8.34, 8.5, 8.53, 8.6, 8.84, 8.82, 8.88, 8.89, 8.76, 8.81, 8.75, 8.77, 8.74, 8.82, 8.7, 8.7, 8.77, 8.77, 8.73, 8.73, 8.41, 8.42, 7.94, 8.22, 8.27, 8.03, 7.76, 7.61, 7.56, 7.88, 7.92, 7.91, 8.05, 8.12, 8.04, 8.17, 8.03, 8.28, 8.42, 8.56, 8.4, 8.43, 8.53, 8.45, 8.51, 8.64, 8.63, 8.57, 8.63, 8.58, 8.37, 8.59, 8.16, 7.64, 7.2, 6.78, 6.39, 6.08, 5.8, 5.53, 5.3, 5.06, 4.87, 4.69, 4.53, 4.33, 4.2, 4.05, 3.94, 3.82, 3.71, 3.61, 3.52, 3.42, 3.33, 3.25, 3.17, 3.11, 3.02, 2.96, 2.89, 2.83, 2.78, 2.73, 2.67, 2.61, 2.55, 2.51, 2.46, 2.41, 2.38, 2.33, 2.28, 2.26, 2.22, 2.19, 2.15, 2.12, 2.11, 2.06, 2.01, 2.0, 1.97, 1.94, 1.91, 1.88, 1.86, 1.83, 1.8, 1.79, 1.77, 1.75, 1.72, 1.71, 1.69, 1.66, 1.66, 1.62, 1.6, 1.58, 1.57, 1.55, 1.53, 1.51, 1.5, 1.48, 1.46, 1.45, 1.44, 1.43, 1.41, 1.4, 1.39, 1.38, 1.37, 1.35, 1.33, 1.33, 1.32, 1.29, 1.29, 1.28, 1.27, 1.26, 1.25, 1.23, 1.22, 1.21, 1.21, 1.19, 1.19, 1.18, 1.18, 1.16, 1.15, 1.15, 1.13, 1.13, 1.12, 1.11, 1.09, 1.09, 1.08, 1.08, 1.06, 1.07, 1.05, 1.04, 1.04, 1.03, 1.03, 1.01, 1.01, 1.0, 0.99, 0.99, 0.98, 0.98, 0.97, 0.96, 0.95, 0.95, 0.94, 0.94, 0.93, 0.92, 0.91, 0.92, 0.9, 0.89, 0.89, 0.88, 0.87, 0.87, 0.87, 0.86, 0.86, 0.86, 0.85, 0.84, 0.83, 0.82, 0.83, 0.82, 0.81, 0.8, 0.81, 0.79, 0.78, 0.74, 0.73, 0.77, 0.77, 0.76, 0.75, 0.74, 0.73, 0.72, 0.7, 0.65, 0.07, 0.08, 0.07, 0.07, 0.07, 0.08, 0.07, 0.07, 0.08, 0.08, 0.08, 0.07, 0.07, 0.08, 0.08], "phase": ["pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "pre-infusion", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "extraction", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping", "dripping"], "phases": [{"phase": "pre-infusion", "from_s": 0.0, "duration_s": 9.7, "avg_bar": 0.6, "peak_bar": 0.81, "meaningful_s": 0.0}, {"phase": "extraction", "from_s": 9.7, "duration_s": 32.1, "avg_bar": 8.09, "peak_bar": 10.46, "meaningful_s": 31.45}, {"phase": "dripping", "from_s": 41.8, "duration_s": 38.6, "avg_bar": 1.59, "peak_bar": 5.8, "meaningful_s": 0.0}], "metrics": {"phases_logged": 1.0, "baseline_bar": 0.067, "sample_interval_s": 0.21, "preinfusion_s": 9.66, "preinfusion_bar": 0.604, "extraction_s": 32.13, "dripping_s": 38.64, "timer_s": 41.79, "ramp_s": 0.68, "zone_mean_bar": 8.197, "fall_s": 25.53, "shot_duration_s": 57.44, "peak_bar": 10.46, "peak_t": 11.0, "meaningful_s": 31.45, "at_target_s": 0.88, "extraction_start": 10.34, "extraction_end": 41.57, "area_before": 7.851, "area_extraction": 254.453, "area_after": 60.064, "area_total": 322.369}, "notes": {"date": "2026-10-25", "beans": "Lidl", "roast": "very dark", "freshness": "fresh", "grind_setting": "2", "dose_g": "9", "yield_g": "27", "basket": "small", "comments": "Bitter - slightly burnt. Grinder was stuck with static retention so slowly fed"}}]};
+const EMBEDDED = DATA.shots;
+let shots = EMBEDDED.slice();
+const TARGET = DATA.target, THRESHOLD = DATA.threshold;
+const $ = (id) => document.getElementById(id);
+const fmt = (v, d = 1) => Number(v).toFixed(d);
+const pct = (v) => Math.round(v * 100) + "%";
+const NS = "http://www.w3.org/2000/svg";
+
+let sel = shots.length - 1;
+let cmp = -1;
+
+function el(tag, attrs = {}, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+function fillSelects() {
+  const s = $("shot"), c = $("compare");
+  s.replaceChildren(); c.replaceChildren();
+  shots.forEach((sh, i) => s.add(new Option(sh.name, i)));
+  c.add(new Option("nothing", -1));
+  shots.forEach((sh, i) => c.add(new Option(sh.name, i)));
+}
+
+function setupSelects() {
+  fillSelects();
+  const s = $("shot"), c = $("compare");
+  s.addEventListener("change", () => { sel = +s.value; render(); });
+  c.addEventListener("change", () => { cmp = +c.value; render(); });
+  $("prev").addEventListener("click", () => { sel = (sel - 1 + shots.length) % shots.length; render(); });
+  $("next").addEventListener("click", () => { sel = (sel + 1) % shots.length; render(); });
+}
+
+function gauge(key, value, unit, detail, cls) {
+  const g = document.createElement("div");
+  g.className = "gauge";
+  const k = document.createElement("span"); k.className = "k"; k.textContent = key;
+  const v = document.createElement("span"); v.className = "v" + (cls ? " " + cls : "");
+  v.textContent = value;
+  if (unit) { const u = document.createElement("small"); u.textContent = unit; v.appendChild(u); }
+  const d = document.createElement("span"); d.className = "d"; d.textContent = detail;
+  g.append(k, v, d);
+  return g;
+}
+
+function renderGauges(m, phases) {
+  const box = $("gauges"); box.replaceChildren();
+  const ext = phases.find((p) => p.phase === "extraction");
+  const peakCls = m.peak_bar >= TARGET ? "ok" : m.peak_bar >= THRESHOLD ? "warn" : "bad";
+  const zoneCls = m.meaningful_s >= 20 ? "ok" : m.meaningful_s >= 10 ? "warn" : "bad";
+  const other = m.area_before + m.area_after;
+  box.append(
+    gauge("Peak", fmt(m.peak_bar, 2), "bar", `at ${fmt(m.peak_t)} s into the shot`, peakCls),
+    gauge("Meaningful extraction", fmt(m.meaningful_s), "s",
+          ext ? `of ${fmt(ext.duration_s)} s extraction (${pct(m.meaningful_s / ext.duration_s)}), at or above ${THRESHOLD} bar`
+              : `at or above ${THRESHOLD} bar`, zoneCls),
+    gauge("Avg in that zone", fmt(m.zone_mean_bar, 2), "bar", `${fmt(m.at_target_s)} s at or above ${TARGET} bar`),
+    gauge("Area in zone", pct(m.area_extraction / m.area_total), "", `${fmt(m.area_extraction, 0)} vs ${fmt(other, 0)} bar·s other`),
+    gauge("Pre-infusion", fmt(m.preinfusion_s), "s", `at ${fmt(m.preinfusion_bar, 2)} bar`),
+    gauge("Shot timer", fmt(m.timer_s), "s", "pre-infusion + extraction, as on the screen"),
+  );
+}
+
+function renderLegend(sh, other) {
+  // shaded areas: small chips beside the title
+  const lg = $("legend"); lg.replaceChildren();
+  const chip = (color, text) => {
+    const s = document.createElement("span");
+    const i = document.createElement("i");
+    i.style.background = color;
+    s.append(i, document.createTextNode(text));
+    lg.appendChild(s);
+  };
+  chip("var(--zone-fill)", `≥ ${THRESHOLD} bar zone`);
+  chip("var(--rest-fill)", "rest of the shot");
+
+  // each plotted shot: its line style, name and comment
+  const box = $("legend-shots"); box.replaceChildren();
+  const row = (s, ghost) => {
+    const li = document.createElement("li");
+    const sw = document.createElement("span"); sw.className = "swatch" + (ghost ? " ghost" : "");
+    const name = document.createElement("span"); name.className = "name"; name.textContent = s.name;
+    const comment = document.createElement("span");
+    const text = notesFor(s).comments || "";
+    comment.className = "comment" + (text ? "" : " none");
+    comment.textContent = text || "no comment yet";
+    li.append(sw, name, comment);
+    box.appendChild(li);
+  };
+  row(sh, false);
+  if (other) row(other, true);
+}
+
+function renderChart(sh, other) {
+  const svg = $("chart");
+  svg.replaceChildren();
+  const W = Math.max(320, svg.parentElement.clientWidth - 28);
+  // phase strips above the plot: a full one for the shot, a thinner one for the compared shot
+  const STRIP = 18, STRIP_THIN = 10, GAP = 4;
+  const stripsH = STRIP + (other ? GAP + STRIP_THIN : 0) + 8;
+  const H = Math.round(Math.min(380, Math.max(240, W * 0.42))) + stripsH;
+  const pad = { l: 38, r: 14, t: 12 + stripsH, b: 30 };
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+  const m = sh.metrics;
+  const lines = [sh].concat(other ? [other] : []);
+  const xMax = Math.max(...lines.map((s) => s.t[s.t.length - 1]));
+  const yMax = Math.ceil(Math.max(TARGET, ...lines.map((s) => s.metrics.peak_bar)) + 1);
+  const x = (t) => pad.l + (t / xMax) * (W - pad.l - pad.r);
+  const y = (b) => H - pad.b - (b / yMax) * (H - pad.t - pad.b);
+
+  // grid and axes
+  for (let b = 0; b <= yMax; b += 2) {
+    el("line", { x1: pad.l, x2: W - pad.r, y1: y(b), y2: y(b), stroke: "var(--line)", "stroke-width": 1 }, svg);
+    const t = el("text", { x: pad.l - 6, y: y(b) + 4, "text-anchor": "end" }, svg); t.textContent = b;
+  }
+  const step = xMax > 120 ? 20 : 10;
+  for (let s = 0; s <= xMax; s += step) {
+    const t = el("text", { x: x(s), y: H - pad.b + 16, "text-anchor": "middle" }, svg); t.textContent = s;
+  }
+  const xl = el("text", { x: W - pad.r, y: H - 2, "text-anchor": "end" }, svg); xl.textContent = "seconds into shot";
+
+  // areas: zone vs rest, both from the resting baseline up to the trace
+  const base = m.baseline_bar;
+  const area = (keep) => {
+    const pts = sh.t.map((t, i) => [t, sh.bar[i]]).filter(([t]) => keep(t));
+    if (pts.length < 2) return;
+    const d = `M${x(pts[0][0])},${y(base)} ` + pts.map(([t, b]) => `L${x(t)},${y(Math.max(b, base))}`).join(" ")
+      + ` L${x(pts[pts.length - 1][0])},${y(base)} Z`;
+    return d;
+  };
+  const s0 = m.extraction_start, s1 = m.extraction_end;
+  for (const d of [area((t) => t <= s0), area((t) => t >= s1)]) if (d) el("path", { d, fill: "var(--rest-fill)", stroke: "none" }, svg);
+  const dz = area((t) => t >= s0 && t <= s1);
+  if (dz) el("path", { d: dz, fill: "var(--zone-fill)", stroke: "none" }, svg);
+
+  // phases: strips across the top, and a faint line down the plot where each of the shot's phases starts
+  const strip = (s, top, h, withLabels) => {
+    for (const p of s.phases) {
+      const x0 = x(Math.min(p.from_s, xMax)), x1 = x(Math.min(p.from_s + p.duration_s, xMax));
+      if (x1 - x0 < 1) continue;
+      el("rect", { x: x0, y: top, width: x1 - x0, height: h, fill: PHASE_COLOURS[p.phase], opacity: withLabels ? 0.9 : 0.6 }, svg);
+      // inside extraction: the stretch at or above 6 bar, darker
+      if (p.phase === "extraction" && s.metrics.extraction_start === s.metrics.extraction_start) {
+        const z0 = x(Math.max(p.from_s, s.metrics.extraction_start));
+        const z1 = x(Math.min(p.from_s + p.duration_s, s.metrics.extraction_end, xMax));
+        if (z1 > z0) el("rect", { x: z0, y: top, width: z1 - z0, height: h, fill: "var(--ph-ext-strong)" }, svg);
+      }
+      if (withLabels) {
+        const label = p.phase.charAt(0).toUpperCase() + p.phase.slice(1);
+        const full = p.phase === "extraction" && p.meaningful_s > 0
+          ? `${label} ${fmt(p.duration_s)} s · ${fmt(p.meaningful_s)} s meaningful`
+          : `${label} ${fmt(p.duration_s)} s`;
+        const mid = `${label} ${fmt(p.duration_s)} s`;
+        // the widest label that fits its band: full, then name and duration, then name, then nothing
+        const fits = (txt) => txt.length * 6.6 + 8 <= x1 - x0;
+        const text = fits(full) ? full : fits(mid) ? mid : fits(label) ? label : "";
+        if (text) {
+          const t = el("text", { x: (x0 + x1) / 2, y: top + h / 2 + 4, "text-anchor": "middle" }, svg);
+          t.textContent = text; t.style.fill = "var(--panel)"; t.style.fontWeight = "500";
+        }
+      }
+    }
+  };
+  strip(sh, 4, STRIP, true);
+  if (other) {
+    strip(other, 4 + STRIP + GAP, STRIP_THIN, false);
+    const t = el("text", { x: pad.l - 6, y: 4 + STRIP + GAP + STRIP_THIN - 1, "text-anchor": "end" }, svg);
+    t.textContent = "vs"; t.style.fontSize = "10px";
+  }
+  for (const p of sh.phases) {
+    if (p.from_s <= 0 || p.from_s > xMax) continue;
+    el("line", { x1: x(p.from_s), x2: x(p.from_s), y1: 4, y2: H - pad.b, stroke: PHASE_COLOURS[p.phase],
+                 "stroke-width": 1, "stroke-dasharray": "2 3", opacity: 0.8 }, svg);
+  }
+
+  // reference lines
+  const ref = (b, color, label) => {
+    el("line", { x1: pad.l, x2: W - pad.r, y1: y(b), y2: y(b), stroke: color, "stroke-width": 1.2, "stroke-dasharray": "3 4" }, svg);
+    const t = el("text", { x: pad.l + 6, y: y(b) - 5 }, svg); t.textContent = label; t.style.fill = color;
+  };
+  ref(TARGET, "var(--target)", `target ${TARGET} bar`);
+  ref(THRESHOLD, "var(--zone)", `meaningful ${THRESHOLD} bar`);
+
+  // traces
+  const path = (s) => s.t.map((t, i) => `${i ? "L" : "M"}${x(t)},${y(s.bar[i])}`).join(" ");
+  if (other) el("path", { d: path(other), fill: "none", stroke: "var(--ghost)", "stroke-width": 1.5, "stroke-dasharray": "5 4" }, svg);
+  el("path", { d: path(sh), fill: "none", stroke: "var(--trace)", "stroke-width": 2, "stroke-linejoin": "round" }, svg);
+
+  // peak
+  el("circle", { cx: x(m.peak_t), cy: y(m.peak_bar), r: 4.5, fill: "var(--peak)" }, svg);
+  const pl = el("text", { x: x(m.peak_t) + 8, y: y(m.peak_bar) - 6 }, svg);
+  pl.textContent = `${fmt(m.peak_bar, 2)} bar`; pl.style.fill = "var(--peak)";
+
+  // hover readout
+  const cursor = el("line", { y1: pad.t, y2: H - pad.b, stroke: "var(--muted)", "stroke-width": 1, visibility: "hidden" }, svg);
+  const dot = el("circle", { r: 4, fill: "var(--trace)", visibility: "hidden" }, svg);
+  const readout = $("readout");
+  const hit = el("rect", { x: pad.l, y: pad.t, width: W - pad.l - pad.r, height: H - pad.t - pad.b, fill: "transparent" }, svg);
+  const move = (ev) => {
+    const r = svg.getBoundingClientRect();
+    const px = ((ev.clientX - r.left) / r.width) * W;
+    const t = ((px - pad.l) / (W - pad.l - pad.r)) * xMax;
+    let i = 0, best = Infinity;
+    sh.t.forEach((tt, j) => { const dd = Math.abs(tt - t); if (dd < best) { best = dd; i = j; } });
+    const cx = x(sh.t[i]), cy = y(sh.bar[i]);
+    cursor.setAttribute("x1", cx); cursor.setAttribute("x2", cx); cursor.setAttribute("visibility", "visible");
+    dot.setAttribute("cx", cx); dot.setAttribute("cy", cy); dot.setAttribute("visibility", "visible");
+    readout.textContent = `${fmt(sh.t[i])} s  ·  ${fmt(sh.bar[i], 2)} bar  ·  ${sh.phase[i]}`;
+    readout.hidden = false;
+    const box = svg.parentElement.getBoundingClientRect();
+    const left = (cx / W) * r.width + (r.left - box.left);
+    readout.style.left = Math.min(Math.max(left - readout.offsetWidth / 2, 4), box.width - readout.offsetWidth - 4) + "px";
+    readout.style.top = ((cy / H) * r.height + (r.top - box.top) - 34) + "px";
+  };
+  hit.addEventListener("pointermove", move);
+  hit.addEventListener("pointerleave", () => {
+    cursor.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden"); readout.hidden = true;
+  });
+
+  $("chart-title").textContent = other ? `${sh.name} vs ${other.name}` : `${sh.name}: pressure over time`;
+}
+
+// ---- notes: saved to the artifact's own database (db capability) ----
+const FIELDS = [
+  ["beans", "Beans", "text", "e.g. Lidl espresso"],
+  ["roast", "Roast", "text", "light, medium, dark"],
+  ["freshness", "Freshness", "text", "roast date, or fresh"],
+  ["grind_setting", "Grind setting", "text", "e.g. 3"],
+  ["dose_g", "Dose (g)", "number", "coffee in"],
+  ["yield_g", "Yield (g)", "number", "espresso out"],
+  ["basket", "Basket", "text", "small or large", true],
+  ["comments", "Comments", "textarea", "how it tasted, what you changed, anything you noticed", true],
+];
+let store = null;        // db namespace, once the viewer grants it
+let readOnly = false;
+let savedNotes = {};     // shot name -> saved fields, live from the database
+const drafts = {};       // shot name -> unsaved edits, kept while switching shots
+
+function buildForm() {
+  const box = $("fields");
+  for (const [key, label, type, hint, wide] of FIELDS) {
+    const l = document.createElement("label");
+    l.htmlFor = "f-" + key;
+    if (wide) l.className = "wide";
+    l.append(document.createTextNode(label));
+    const input = document.createElement(type === "textarea" ? "textarea" : "input");
+    input.id = "f-" + key; input.name = key; input.placeholder = hint;
+    if (type === "textarea") input.rows = 2;
+    if (type === "number") { input.type = "number"; input.min = "0"; input.step = "0.1"; input.inputMode = "decimal"; }
+    if (type === "text") input.type = "text";
+    l.appendChild(input);
+    box.appendChild(l);
+  }
+  $("notes-form").addEventListener("input", () => {
+    drafts[shots[sel].name] = readForm();
+    setStatus("Unsaved changes", "dirty");
+    showRatio(drafts[shots[sel].name]);
+  });
+  $("notes-form").addEventListener("submit", saveNotes);
+}
+
+function readForm() {
+  const out = {};
+  for (const [key] of FIELDS) out[key] = $("f-" + key).value.trim();
+  return out;
+}
+
+// older notes kept taste and other notes separately: read them as one comment
+function withComments(n) {
+  if (!n || n.comments !== undefined) return n || {};
+  return { ...n, comments: [n.taste, n.notes].filter(Boolean).join(". ") };
+}
+
+function notesFor(sh) {
+  return drafts[sh.name] || withComments(savedNotes[sh.name] || sh.notes);
+}
+
+function showRatio(n) {
+  const d = parseFloat(n.dose_g), y = parseFloat(n.yield_g);
+  const r = $("ratio"); r.replaceChildren();
+  if (d > 0 && y > 0) {
+    r.append(document.createTextNode(`1:${fmt(y / d)} `));
+    const s = document.createElement("small"); s.textContent = `brew ratio (${n.dose_g} g in, ${n.yield_g} g out)`;
+    r.appendChild(s);
+  } else {
+    const s = document.createElement("small"); s.textContent = "add dose and yield for the brew ratio";
+    r.appendChild(s);
+  }
+}
+
+function setStatus(text, cls) {
+  const s = $("save-state"); s.textContent = text; s.className = "status" + (cls ? " " + cls : "");
+}
+
+function renderNotes(sh) {
+  const n = notesFor(sh);
+  for (const [key] of FIELDS) $("f-" + key).value = n[key] || "";
+  showRatio(n);
+  $("notes-title").textContent = `Setup and taste: ${sh.name}`;
+  const editable = !!store && !readOnly;
+  for (const [key] of FIELDS) $("f-" + key).disabled = !editable;
+  $("save").disabled = !editable;
+  if (drafts[sh.name]) setStatus("Unsaved changes", "dirty");
+  else if (!store) setStatus("Open the published page to edit notes");
+  else if (readOnly) setStatus("You can read these notes but not change them");
+  else setStatus(savedNotes[sh.name] && savedNotes[sh.name].updated_at
+    ? "Saved " + new Date(savedNotes[sh.name].updated_at).toLocaleString() : "Not saved yet");
+}
+
+async function saveNotes(ev) {
+  ev.preventDefault();
+  if (!store || readOnly) return;
+  const sh = shots[sel];
+  const body = { ...readForm(), updated_at: new Date().toISOString() };
+  $("save").disabled = true;
+  setStatus("Saving…");
+  try {
+    await store.doc("notes/" + sh.name).set(body);
+    delete drafts[sh.name];
+    savedNotes[sh.name] = body;
+    setStatus("Saved", "saved");
+    renderTable();
+  } catch (e) {
+    if (e && e.code === "invalid_argument") {
+      readOnly = true;
+      setStatus("You can read these notes but not change them", "err");
+    } else if (e && e.code === "unavailable") {
+      setStatus("Couldn't reach the notes store. Try Save again in a moment.", "err");
+    } else {
+      setStatus("Couldn't save: " + ((e && e.message) || "unknown error"), "err");
+    }
+  } finally {
+    $("save").disabled = !store || readOnly;
+  }
+}
+
+async function connectStore() {
+  if (!window.claude || !window.claude.use) return;   // a saved local copy of the page
+  const db = await window.claude.use("db");
+  if (!db) { renderNotes(shots[sel]); return; }
+  store = db;
+  const user = await window.claude.use("user");
+  if (user && (await user.can("data.write")) === false) readOnly = true;
+  // one subscription for the page's lifetime: every saved note, live
+  db.collection("notes").onSnapshot((snap) => {
+    savedNotes = {};
+    for (const d of snap.docs) savedNotes[d.id] = d.data();
+    // don't refill the form under someone mid-edit
+    if (!drafts[shots[sel].name]) renderNotes(shots[sel]);
+    renderLegend(shots[sel], cmp >= 0 && cmp !== sel ? shots[cmp] : null);
+    renderTable();
+  }, () => {
+    setStatus("Notes stopped updating. Reload the page to reconnect.", "err");
+  });
+  // and one for uploaded shots: each document is a log file's text, analysed here
+  db.collection("shots").onSnapshot((snap) => {
+    uploaded = [];
+    for (const d of snap.docs) {
+      try {
+        const shot = analyseShot(parseShotCsv(d.data().csv || ""));
+        uploaded.push({ ...shot, name: d.id, notes: {}, uploaded: true });
+      } catch (e) { /* a log that no longer parses is left out */ }
+    }
+    refreshShots();
+  }, () => {
+    setStatus("Uploaded shots stopped updating. Reload the page to reconnect.", "err");
+  });
+  $("add-shot").hidden = readOnly;
+  renderNotes(shots[sel]);
+}
+
+const PHASE_COLOURS = { "pre-infusion": "var(--ph-pre)", "extraction": "var(--ph-ext)", "dripping": "var(--ph-drip)" };
+
+function renderPhases(sh) {
+  const tb = $("phase-rows"); tb.replaceChildren();
+  for (const p of sh.phases) {
+    const tr = document.createElement("tr");
+    const name = document.createElement("td");
+    const dot = document.createElement("span"); dot.className = "phase-dot"; dot.style.background = PHASE_COLOURS[p.phase] || "var(--muted)";
+    name.append(dot, document.createTextNode(p.phase));
+    tr.appendChild(name);
+    const meaningful = p.meaningful_s > 0
+      ? `${fmt(p.meaningful_s)} s (${pct(p.meaningful_s / p.duration_s)})` : "–";
+    for (const c of [fmt(p.from_s) + " s", fmt(p.duration_s) + " s", meaningful, fmt(p.avg_bar, 2), fmt(p.peak_bar, 2)]) {
+      const td = document.createElement("td"); td.textContent = c; tr.appendChild(td);
+    }
+    tb.appendChild(tr);
+  }
+  $("phase-source").textContent = "From the log's phase column (p, e, d). Shots logged before the Pico tracked phases were backfilled with the same rules.";
+}
+
+function renderTable() {
+  const tb = $("rows"); tb.replaceChildren();
+  shots.forEach((sh, i) => {
+    const m = sh.metrics;
+    const tr = document.createElement("tr");
+    if (i === sel) tr.className = "sel";
+    const nameCell = document.createElement("td");
+    nameCell.textContent = sh.name;
+    if (sh.uploaded) {
+      const tag = document.createElement("span"); tag.className = "tag"; tag.textContent = "uploaded";
+      nameCell.appendChild(tag);
+      if (store && !readOnly) nameCell.appendChild(removeButton(sh));
+    }
+    tr.appendChild(nameCell);
+    const cells = [fmt(m.peak_bar, 2), fmt(m.meaningful_s) + " s", fmt(m.zone_mean_bar, 2),
+                   fmt(m.at_target_s) + " s", pct(m.area_extraction / m.area_total), fmt(m.preinfusion_s) + " s"];
+    for (const c of cells) { const td = document.createElement("td"); td.textContent = c; tr.appendChild(td); }
+    const taste = document.createElement("td");
+    taste.className = "taste";
+    taste.textContent = withComments(savedNotes[sh.name] || sh.notes).comments || "";
+    taste.title = taste.textContent;
+    tr.appendChild(taste);
+    tr.addEventListener("click", () => { sel = i; render(); });
+    tb.appendChild(tr);
+  });
+}
+
+// ---- uploaded shots: kept in the page's database as the original CSV text ----
+const MAX_CSV_BYTES = 240000;   // a stored document holds 256 KB: ~10,000 readings, over half an hour of logging
+let uploaded = [];               // analysed shots from the database
+let pendingUpload = null;        // { text, shot } while the panel is open
+let selectAfterRefresh = null;   // a just-saved shot to select once it arrives
+
+const cleanName = (name) => name.trim().replace(/\.csv$/i, "").replace(/[^A-Za-z0-9_.~:@+-]/g, "_").slice(0, 60);
+const nameTaken = (name) => shots.some((s) => s.name === name);
+const nameOk = (name) => name.length > 0 && !/^\.+$/.test(name) && !nameTaken(name);
+
+function refreshShots() {
+  const selName = shots[sel] && shots[sel].name;
+  const cmpName = cmp >= 0 && shots[cmp] ? shots[cmp].name : null;
+  const builtIn = new Set(EMBEDDED.map((s) => s.name));   // a shot added to the repo wins over its upload
+  shots = EMBEDDED.concat(uploaded.filter((u) => !builtIn.has(u.name)))
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+  const want = selectAfterRefresh || selName;
+  sel = Math.max(0, shots.findIndex((s) => s.name === want));
+  if (shots[sel].name === selectAfterRefresh) selectAfterRefresh = null;
+  cmp = cmpName ? shots.findIndex((s) => s.name === cmpName) : -1;
+  fillSelects();
+  render();
+}
+
+function setUploadState(text, cls) {
+  const s = $("upload-state"); s.textContent = text; s.className = "status" + (cls ? " " + cls : "");
+}
+
+function closeUpload() { $("upload").hidden = true; pendingUpload = null; }
+
+function checkUploadName() {
+  const typed = $("upload-name").value.trim(), name = cleanName(typed);
+  $("upload-save").disabled = !pendingUpload || !nameOk(name);
+  if (!pendingUpload) return;
+  if (name && nameTaken(name)) setUploadState(`There's already a shot called ${name}. Pick another name.`, "err");
+  else if (name && name !== typed) setUploadState(`Will be saved as ${name}`);
+  else setUploadState("");
+}
+
+async function openUpload(file) {
+  $("upload").hidden = false;
+  pendingUpload = null;
+  $("upload-name").disabled = true;
+  $("upload-save").disabled = true;
+  setUploadState("");
+  const summary = $("upload-summary");
+  const fail = (text) => { summary.textContent = text; setUploadState("Can't add this file", "err"); };
+  if (file.size > MAX_CSV_BYTES) {
+    return fail(`${file.name} is ${Math.round(file.size / 1000)} KB. The page can keep logs up to ${MAX_CSV_BYTES / 1000} KB, about half an hour of logging.`);
+  }
+  let text, parsed, shot;
+  try { text = await file.text(); } catch (e) { return fail("Couldn't read that file."); }
+  try { parsed = parseShotCsv(text); shot = analyseShot(parsed); } catch (e) { return fail(`${file.name}: ${e.message}`); }
+  const m = shot.metrics;
+  summary.textContent = `${file.name}: ${parsed.t.length} readings. Shot timer ${fmt(m.timer_s)} s, peak ${fmt(m.peak_bar, 2)} bar, `
+    + `${fmt(m.meaningful_s)} s at or above ${THRESHOLD} bar.`
+    + (parsed.phase ? "" : " This log has no phase column, so its phases were worked out with the Pico's rules.");
+  pendingUpload = { text, shot };
+  $("upload-name").disabled = false;
+  $("upload-name").value = cleanName(file.name);
+  checkUploadName();
+  $("upload-name").focus();
+}
+
+async function saveUpload() {
+  const name = cleanName($("upload-name").value);
+  if (!pendingUpload || !nameOk(name) || !store) return;
+  $("upload-save").disabled = true;
+  setUploadState("Saving…");
+  selectAfterRefresh = name;   // the database listener adds it, then selects it (it can arrive before set() returns)
+  try {
+    await store.doc("shots/" + name).set({ csv: pendingUpload.text, uploaded_at: new Date().toISOString() });
+    closeUpload();
+  } catch (e) {
+    selectAfterRefresh = null;
+    $("upload-save").disabled = false;
+    setUploadState(e && e.code === "quota_exceeded" ? "The page's storage is full. Remove an uploaded shot first."
+      : e && e.code === "invalid_argument" ? "You can view shots here but not add them."
+      : "Couldn't save the shot. Try again in a moment.", "err");
+  }
+}
+
+function removeButton(sh) {
+  const b = document.createElement("button");
+  b.type = "button"; b.className = "link"; b.textContent = "remove";
+  b.setAttribute("aria-label", `Remove uploaded shot ${sh.name}`);
+  b.addEventListener("click", async (ev) => {
+    ev.stopPropagation();   // don't also select the row
+    if (!b.classList.contains("armed")) { b.classList.add("armed"); b.textContent = "click again to remove"; return; }
+    b.disabled = true;
+    try { await store.doc("shots/" + sh.name).delete(); }
+    catch (e) { b.disabled = false; b.textContent = "couldn't remove, try again"; }
+  });
+  return b;
+}
+
+function setupUpload() {
+  $("add-shot").addEventListener("click", () => $("shot-file").click());
+  $("shot-file").addEventListener("change", async (ev) => {
+    const file = ev.target.files && ev.target.files[0];
+    ev.target.value = "";   // so picking the same file again still opens it
+    if (file) await openUpload(file);
+  });
+  $("upload-name").addEventListener("input", checkUploadName);
+  $("upload-name").addEventListener("keydown", (ev) => { if (ev.key === "Enter") saveUpload(); });
+  $("upload-cancel").addEventListener("click", closeUpload);
+  $("upload-save").addEventListener("click", saveUpload);
+}
+
+function render() {
+  const sh = shots[sel];
+  const other = cmp >= 0 && cmp !== sel ? shots[cmp] : null;
+  $("shot").value = sel;
+  $("compare").value = cmp;
+  renderGauges(sh.metrics, sh.phases);
+  renderLegend(sh, other);
+  renderChart(sh, other);
+  renderPhases(sh);
+  renderNotes(sh);
+  renderTable();
+}
+
+setupSelects();
+setupUpload();
+buildForm();
+render();
+connectStore();
+let resizeTimer;
+window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(render, 120); });
+</script>
